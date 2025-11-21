@@ -1,23 +1,28 @@
 import mongoose from 'mongoose';
 
-const MONGODB_URI = process.env.MONGODB_URI!;
+const MONGODB_URI = process.env.MONGODB_URI || '';
 
-if (!MONGODB_URI) {
-  throw new Error('请在 .env.local 中定义 MONGODB_URI 环境变量');
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
 }
 
-/**
- * Global is used here to maintain a cached connection across hot reloads
- * in development. This prevents connections growing exponentially
- * during API Route usage.
- */
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+declare global {
+  // eslint-disable-next-line no-var
+  var mongoose: MongooseCache | undefined;
 }
 
-async function dbConnect() {
+let cached: MongooseCache = global.mongoose || { conn: null, promise: null };
+
+if (!global.mongoose) {
+  global.mongoose = cached;
+}
+
+async function dbConnect(): Promise<typeof mongoose> {
+  if (!MONGODB_URI) {
+    throw new Error('请在 .env.local 中定义 MONGODB_URI 环境变量');
+  }
+
   if (cached.conn) {
     return cached.conn;
   }
@@ -27,9 +32,7 @@ async function dbConnect() {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      return mongoose;
-    });
+    cached.promise = mongoose.connect(MONGODB_URI, opts);
   }
 
   try {
