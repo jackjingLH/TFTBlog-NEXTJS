@@ -33,9 +33,10 @@ export async function GET(request: Request) {
       pageSize: limit,
       data: posts
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { status: 'error', message: error.message },
+      { status: 'error', message },
       { status: 500 }
     );
   }
