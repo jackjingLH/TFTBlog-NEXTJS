@@ -42,3 +42,6 @@ logs/
 
 # deployment
 .deploy
+
+# claude code local settings
+.claude/
