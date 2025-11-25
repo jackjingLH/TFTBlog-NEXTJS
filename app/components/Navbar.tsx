@@ -19,6 +19,12 @@ export default function Navbar() {
               首页
             </Link>
             <Link
+              href="/guides"
+              className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+            >
+              攻略
+            </Link>
+            <Link
               href="/about"
               className="text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
             >
