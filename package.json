@@ -6,9 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "refresh-feeds": "ts-node scripts/refresh-feeds.ts",
+    "test-rss": "ts-node scripts/test-rss.ts"
   },
   "dependencies": {
+    "fast-xml-parser": "^5.3.2",
     "gray-matter": "^4.0.3",
     "mongoose": "^8.20.1",
     "next": "14.2.33",
@@ -27,6 +30,7 @@
     "eslint-config-next": "14.2.33",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }
