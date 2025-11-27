@@ -168,5 +168,5 @@ C --> E[决出胜者]
 ---
 
 **下一步阅读：**
-- [阵容推荐](/guides/lineup-guide)
+- [阵容推荐](/guides/lineup-guide/index.md)
 - [装备合成表](/guides/equipment-guide)

@@ -25,10 +25,10 @@ export interface GuideData extends GuideMetadata {
  * 获取所有攻略的slug列表
  */
 export function getAllGuideSlugs(): string[] {
-  const files = fs.readdirSync(guidesDirectory);
-  return files
-    .filter(file => file.endsWith('.md'))
-    .map(file => file.replace(/\.md$/, ''));
+  const items = fs.readdirSync(guidesDirectory, { withFileTypes: true });
+  return items
+    .filter(item => item.isDirectory())
+    .map(item => item.name);
 }
 
 /**
@@ -38,7 +38,7 @@ export function getAllGuides(): GuideMetadata[] {
   const slugs = getAllGuideSlugs();
 
   const guides = slugs.map(slug => {
-    const fullPath = path.join(guidesDirectory, `${slug}.md`);
+    const fullPath = path.join(guidesDirectory, slug, 'index.md');
     const fileContents = fs.readFileSync(fullPath, 'utf8');
     const { data } = matter(fileContents);
 
@@ -64,7 +64,7 @@ export function getAllGuides(): GuideMetadata[] {
  */
 export function getGuideBySlug(slug: string): GuideData | null {
   try {
-    const fullPath = path.join(guidesDirectory, `${slug}.md`);
+    const fullPath = path.join(guidesDirectory, slug, 'index.md');
     const fileContents = fs.readFileSync(fullPath, 'utf8');
     const { data, content } = matter(fileContents);
 

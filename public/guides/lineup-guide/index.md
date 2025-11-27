@@ -29,7 +29,7 @@ tags: ["阵容", "版本更新", "强势阵容"]
 2. **中期**：3-2拉6人口，寻找核心卡
 3. **后期**：4-1拉7人口，成型阵容
 
-![阵容站位图](/guides/images/lineup-1.png)
+![阵容站位图](/guides/lineup-guide/images/lineup-1.png)
 
 ### 优势与劣势
 
@@ -113,5 +113,5 @@ tags: ["阵容", "版本更新", "强势阵容"]
 
 **相关攻略：**
 - [装备合成指南](/guides/equipment-guide)
-- [新手入门教程](/guides/beginner-guide)
+- [新手入门教程](/guides/beginner-guide/index.md)
 - [版本更新解读](/guides/patch-notes)
