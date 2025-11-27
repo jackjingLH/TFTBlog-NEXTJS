@@ -5,6 +5,7 @@ export interface FeedArticle {
   description: string;     // 摘要/描述
   link: string;            // 跳转链接
   source: string;          // 来源 (NGA/TapTap/Bilibili等)
+  category?: string;       // 分类（可选）
   publishedAt: Date;       // 发布时间
   fetchedAt: Date;         // 抓取时间
 }

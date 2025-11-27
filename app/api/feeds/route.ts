@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CacheService } from '@/lib/services/cache.service';
 import { RSSHubService } from '@/lib/services/rsshub.service';
+import { TFTimesService } from '@/lib/services/tftimes.service';
 import { FeedResponse } from '@/types/feed';
 
 /**
@@ -18,18 +19,44 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const source = searchParams.get('source');
+    const refresh = searchParams.get('refresh') === '1';
 
-    // 1. 尝试从内存缓存读取
+    // 1. 如果要求刷新，清除缓存
+    if (refresh) {
+      CacheService.clear();
+    }
+
+    // 2. 尝试从内存缓存读取
     let articles = CacheService.get();
     let cached = true;
 
-    // 2. 缓存未命中，从 RSSHub 获取并缓存
+    // 3. 缓存未命中，从数据源获取并缓存
     if (!articles) {
       console.log('[API] 缓存未命中，从 RSSHub 获取数据...');
       cached = false;
 
       try {
-        articles = await RSSHubService.fetchAll();
+        // 并行获取所有数据源
+        const [rsshubArticles, tftimesArticles] = await Promise.allSettled([
+          RSSHubService.fetchAll(),
+          TFTimesService.fetchAll()
+        ]);
+
+        // 合并结果
+        articles = [];
+
+        if (rsshubArticles.status === 'fulfilled') {
+          articles.push(...rsshubArticles.value);
+        } else {
+          console.error('[API] RSSHub 获取失败:', rsshubArticles.reason);
+        }
+
+        if (tftimesArticles.status === 'fulfilled') {
+          articles.push(...tftimesArticles.value);
+        } else {
+          console.error('[API] TFTimes 获取失败:', tftimesArticles.reason);
+        }
+
         articles = RSSHubService.deduplicateArticles(articles);
         CacheService.set(articles);
       } catch (error) {

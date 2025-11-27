@@ -129,6 +129,30 @@ pm2 start ecosystem.config.js
 pm2 save
 ```
 
+## File Management Guidelines
+
+### 🚫 Avoid File Duplication
+
+**PRINCIPLE: Do not create duplicate files for the same functionality.**
+
+When working on this project:
+
+1. **Single Source of Truth**: Each functionality should have only one dedicated file
+2. **Modify Existing Files**: Instead of creating new versions, update the existing file
+3. **Consolidate Related Code**: Keep similar functionality together in logical groups
+4. **Avoid Test File Proliferation**: Delete test files after verification, don't keep multiple versions
+
+**Examples of what NOT to do:**
+- Creating `deploy-v2.bat` when `deploy.bat` exists → Instead: modify `deploy.bat`
+- Creating `test-api-new.ts` when `test-api.ts` exists → Instead: update `test-api.ts`
+- Creating `config-backup.js` when `config.js` exists → Instead: modify `config.js`
+
+**Proper workflow:**
+1. Check if a file for the functionality already exists
+2. If yes, modify the existing file
+3. If no, create a new well-named file
+4. Delete temporary/test files after use
+
 ## Database Connection Details
 
 Cloud MongoDB instance: `mongodb://47.99.202.3:27017/tftblog`

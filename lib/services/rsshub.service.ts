@@ -1,30 +1,17 @@
 import { FeedArticle, RSSSource } from '@/types/feed';
 import { parseXML, generateArticleId } from '@/lib/utils/xml-parser';
 
-// RSSHub 数据源配置 - B站UP主视频
+// RSSHub 数据源配置 - 已清空，主要使用 TFTimes 服务
 const RSS_SOURCES: RSSSource[] = [
-  {
-    name: '荡狗天天开心',
-    url: 'https://rsshub.app/bilibili/user/video/514939907',
-    source: 'Bilibili',
-  },
-  {
-    name: '手刃猫咪',
-    url: 'https://rsshub.app/bilibili/user/video/262943792',
-    source: 'Bilibili',
-  },
-  {
-    name: '襄平霸王东',
-    url: 'https://rsshub.app/bilibili/user/video/37452208',
-    source: 'Bilibili',
-  },
+  // 暂时保留为空数组
+  // 后续可以添加其他不需要 Chrome 的数据源
 ];
 
 // RSSHub 实例列表
 const RSSHUB_INSTANCES = [
+  'http://localhost:1200',  // 本地 Docker 实例
   'https://rsshub.app',
   'https://rss.rssforever.com',
-  'https://rsshub.ktachibana.party',
 ];
 
 export class RSSHubService {
