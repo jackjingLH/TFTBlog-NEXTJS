@@ -1,68 +1,76 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code (claude.ai/code) 提供此项目的开发指南。
 
-## Project Overview
+## 项目概述
 
-TFT金铲铲博客 (TFT Blog) - A full-stack Next.js blog application for Teamfight Tactics content, including guides, hero analysis, equipment synthesis, version updates, and beginner tutorials.
+TFT金铲铲博客 (TFT Blog) - 一个基于 Next.js 的全栈博客应用，专注于云顶之弈内容聚合，包括阵容攻略、英雄解析、装备合成、版本更新和新手教程。
 
-## Development Commands
+## 开发命令
 
 ```bash
-npm run dev      # Start development server on http://localhost:3000
-npm run build    # Build production version
-npm run start    # Start production server
-npm run lint     # Run ESLint code checking
+npm run dev      # 启动开发服务器 http://localhost:3000
+npm run build    # 构建生产版本
+npm run start    # 启动生产服务器
+npm run lint     # 运行 ESLint 代码检查
 ```
 
-## Architecture
+## 技术架构
 
-### Technology Stack
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript (strict mode enabled)
-- **Database**: MongoDB (Mongoose 8.x)
-- **Styling**: Tailwind CSS
-- **Process Manager**: PM2 (for production deployment)
+### 技术栈
+- **框架**: Next.js 14 with App Router
+- **语言**: TypeScript (严格模式)
+- **数据库**: MongoDB (Mongoose 8.x)
+- **样式**: Tailwind CSS
+- **进程管理**: PM2 (生产环境)
 
-### Directory Structure
+### 目录结构
 
 ```
 app/
-├── api/              # API Routes (Next.js route handlers)
-│   ├── posts/        # Article endpoints
-│   └── categories/   # Category endpoints
-├── components/       # React components
+├── api/              # API 路由 (Next.js route handlers)
+│   ├── posts/        # 文章接口
+│   ├── categories/   # 分类接口
+│   ├── feeds/        # RSS 聚合接口
+│   └── about/        # 关于页面接口
+├── components/       # React 组件
 │   ├── Navbar.tsx
-│   └── ArticleList.tsx
-├── layout.tsx        # Root layout
-└── page.tsx          # Homepage
+│   └── FeedList.tsx
+├── about/            # 关于页面
+│   └── page.tsx
+├── layout.tsx        # 根布局
+└── page.tsx          # 首页
 
 lib/
-└── mongodb.ts        # MongoDB connection utility with caching
+├── mongodb.ts        # MongoDB 连接工具（带缓存）
+└── services/         # 服务层
+    ├── cache.service.ts     # 缓存服务
+    ├── rsshub.service.ts    # RSSHub 服务
+    └── tftimes.service.ts   # TFT Times 服务
 
 types/
-├── article.ts        # TypeScript interfaces for articles
-└── mongoose.d.ts     # Global Mongoose type definitions
+├── article.ts        # 文章类型定义
+└── mongoose.d.ts     # Mongoose 全局类型
 ```
 
-### Database Connection Pattern
+### 数据库连接模式
 
-The project uses a cached MongoDB connection pattern in `lib/mongodb.ts`:
-- Connection is cached globally to prevent multiple connections in development hot-reloading
-- Uses Mongoose with `bufferCommands: false` option
-- Requires `MONGODB_URI` environment variable
-- Connection is established lazily on first request
+项目在 `lib/mongodb.ts` 中使用缓存的 MongoDB 连接模式：
+- 全局缓存连接，防止开发环境热重载时产生多个连接
+- 使用 Mongoose，设置 `bufferCommands: false`
+- 需要 `MONGODB_URI` 环境变量
+- 首次请求时建立连接（懒加载）
 
-### API Routes Pattern
+### API 路由模式
 
-API routes use Next.js App Router conventions:
-- Located in `app/api/[resource]/route.ts`
-- Export async functions: `GET`, `POST`, `PUT`, `DELETE`
-- Direct MongoDB collection access via `mongoose.connection.db`
-- Support pagination with `page` and `limit` query parameters
-- Return standardized JSON responses with `status`, `data`, and metadata
+API 路由遵循 Next.js App Router 约定：
+- 位于 `app/api/[resource]/route.ts`
+- 导出异步函数：`GET`, `POST`, `PUT`, `DELETE`
+- 通过 `mongoose.connection.db` 直接访问 MongoDB 集合
+- 支持 `page` 和 `limit` 查询参数分页
+- 返回标准化的 JSON 响应，包含 `status`、`data` 和元数据
 
-Example API response structure:
+API 响应结构示例：
 ```typescript
 {
   status: 'success',
@@ -74,87 +82,183 @@ Example API response structure:
 }
 ```
 
-### Path Aliases
+### 路径别名
 
-The project uses `@/*` path alias pointing to the root directory (configured in tsconfig.json).
+项目使用 `@/*` 路径别名指向根目录（在 tsconfig.json 中配置）。
 
-Example imports:
+导入示例：
 ```typescript
 import dbConnect from '@/lib/mongodb';
 import { Article } from '@/types/article';
 ```
 
-## Environment Variables
+## 环境变量
 
-Required environment variables (in `.env.local` for development, `.env.production` for production):
+开发环境（`.env.local`）和生产环境（`.env.production`）所需的环境变量：
 
-```
-MONGODB_URI=mongodb://host:port/tftblog
+```env
+MONGODB_URI=mongodb://47.99.202.3:27017/tftblog
 JWT_SECRET=your-secret-key
 NODE_ENV=development|production
 PORT=3000
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-## Database Schema
+## 数据库架构
 
-The MongoDB database contains two main collections:
+MongoDB 数据库包含以下集合：
 
-**posts** collection:
-- Contains articles with title, content, tags, views, createdAt
-- Pre-populated with 5 sample articles
+### posts 集合
+- 文章数据：标题、内容、标签、浏览量、创建时间
+- 预置了 5 篇示例文章
 
-**categories** collection:
-- 5 categories: 阵容攻略, 英雄解析, 装备合成, 版本更新, 新手教程
+### categories 集合
+- 5 个分类：阵容攻略、英雄解析、装备合成、版本更新、新手教程
 
-## Testing and Accessing APIs
+### about 集合
+- 关于页面内容
+- 包含：标题、描述、Markdown 内容、特性列表、统计数据
 
-API endpoints for development testing:
-- `http://localhost:3000/api/posts?page=1&limit=10` - Get paginated posts
-- `http://localhost:3000/api/categories` - Get all categories
+### chat 集合
+- 聊天或反馈记录（遗留数据）
 
-## Deployment
+## API 接口测试
 
-The project includes PM2 configuration for production deployment:
-- Config file: `ecosystem.config.js`
-- App name: `tftblog-nextjs`
-- Deployment guide: See `DEPLOYMENT.md`
-- Deploy script: `./deploy.sh` (automated pull, build, restart)
+开发环境 API 端点：
+- `http://localhost:3000/api/posts?page=1&limit=10` - 获取分页文章
+- `http://localhost:3000/api/categories` - 获取所有分类
+- `http://localhost:3000/api/feeds?limit=15` - 获取 RSS 聚合内容
+- `http://localhost:3000/api/about` - 获取关于页面数据
 
-Production deployment steps:
+## 部署方式
+
+### ⚠️ 重要说明
+
+**服务器无法访问 GitHub**，因此采用**本地构建 + SCP 上传**的部署方式。
+
+### 部署流程
+
+#### 1. 本地构建
+
 ```bash
-npm install
+# 在本地构建生产版本
 npm run build
-pm2 start ecosystem.config.js
-pm2 save
 ```
 
-## File Management Guidelines
+构建产物位于 `.next` 目录。
 
-### 🚫 Avoid File Duplication
+#### 2. 上传构建产物
 
-**PRINCIPLE: Do not create duplicate files for the same functionality.**
+```bash
+# 使用 SCP 上传 .next 目录到服务器
+scp -r .next root@47.99.202.3:/var/www/TFTBlog-NEXTJS/
+```
 
-When working on this project:
+#### 3. 重启 PM2 应用
 
-1. **Single Source of Truth**: Each functionality should have only one dedicated file
-2. **Modify Existing Files**: Instead of creating new versions, update the existing file
-3. **Consolidate Related Code**: Keep similar functionality together in logical groups
-4. **Avoid Test File Proliferation**: Delete test files after verification, don't keep multiple versions
+```bash
+# SSH 连接服务器并重启应用
+ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save"
+```
 
-**Examples of what NOT to do:**
-- Creating `deploy-v2.bat` when `deploy.bat` exists → Instead: modify `deploy.bat`
-- Creating `test-api-new.ts` when `test-api.ts` exists → Instead: update `test-api.ts`
-- Creating `config-backup.js` when `config.js` exists → Instead: modify `config.js`
+#### 4. 验证部署
 
-**Proper workflow:**
-1. Check if a file for the functionality already exists
-2. If yes, modify the existing file
-3. If no, create a new well-named file
-4. Delete temporary/test files after use
+```bash
+# 测试生产环境页面
+curl -I http://47.99.202.3/about
 
-## Database Connection Details
+# 测试 API 接口
+curl http://47.99.202.3/api/about
+```
 
-Cloud MongoDB instance: `mongodb://47.99.202.3:27017/tftblog`
+### 完整部署脚本示例
 
-Note: This is an existing cloud database with pre-populated data from a previous project migration.
+```bash
+# 本地构建
+npm run build
+
+# 上传到服务器
+scp -r .next root@47.99.202.3:/var/www/TFTBlog-NEXTJS/
+
+# 重启应用
+ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save"
+
+# 验证部署
+curl -I http://47.99.202.3/
+```
+
+### PM2 配置
+
+生产环境使用 PM2 进行进程管理：
+- 配置文件：`ecosystem.config.js`
+- 应用名称：`tftblog-nextjs`
+- 实例数：1
+- 内存限制：1G
+
+```bash
+# PM2 常用命令
+pm2 status                    # 查看应用状态
+pm2 logs tftblog-nextjs      # 查看日志
+pm2 restart tftblog-nextjs   # 重启应用
+pm2 stop tftblog-nextjs      # 停止应用
+pm2 save                     # 保存当前进程列表
+```
+
+## 文件管理规范
+
+### 🚫 避免文件重复
+
+**原则：不要为同一功能创建重复文件。**
+
+开发时遵循：
+
+1. **单一数据源**：每个功能只应有一个专用文件
+2. **修改现有文件**：不要创建新版本，而是更新现有文件
+3. **整合相关代码**：将相似功能保持在逻辑分组中
+4. **避免测试文件泛滥**：验证后删除测试文件，不要保留多个版本
+
+**错误示例：**
+- 存在 `deploy.bat` 时创建 `deploy-v2.bat` → 应该：修改 `deploy.bat`
+- 存在 `test-api.ts` 时创建 `test-api-new.ts` → 应该：更新 `test-api.ts`
+- 存在 `config.js` 时创建 `config-backup.js` → 应该：修改 `config.js`
+
+**正确流程：**
+1. 检查功能对应的文件是否已存在
+2. 如果存在，修改现有文件
+3. 如果不存在，创建命名规范的新文件
+4. 使用后删除临时/测试文件
+
+## 数据库连接详情
+
+云端 MongoDB 实例：`mongodb://47.99.202.3:27017/tftblog`
+
+注意：这是一个现有的云数据库，包含从之前项目迁移的预置数据。
+
+## RSS 聚合服务
+
+项目从以下来源聚合内容：
+
+1. **RSSHub** - 开源 RSS 订阅服务
+   - 荡狗天天开心
+   - 手刃猫咪
+   - 襄平霸王东
+
+2. **TFT Times** - 日本云顶之弈资讯站
+   - 分类：メタ＆攻略、パッチノート、ニュース
+
+### 缓存策略
+
+- 内存缓存：15 分钟
+- 缓存服务：`lib/services/cache.service.ts`
+- 手动刷新：`POST /api/feeds/refresh`
+
+## 生产环境信息
+
+- **服务器地址**：47.99.202.3
+- **访问地址**：http://47.99.202.3
+- **项目路径**：/var/www/TFTBlog-NEXTJS
+- **Nginx 配置**：反向代理到 localhost:3000
+- **日志路径**：
+  - Nginx: `/www/wwwlogs/tftblog.log`
+  - MongoDB: `/www/server/mongodb/log/mongodb.log`
+  - PM2: `pm2 logs tftblog-nextjs`
