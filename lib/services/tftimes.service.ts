@@ -113,10 +113,10 @@ export class TFTimesService {
         // 提取文章 ID
         const idMatch = articleHTML.match(/id="post-(\d+)"/);
         const postId = idMatch ? idMatch[1] : '';
-        const id = postId || generateArticleId(link);
 
         // 构建正确链接
         const link = postId ? `${this.BASE_URL}/?p=${postId}` : '#';
+        const id = postId || generateArticleId(link);
 
         // 提取日期
         let pubDate = new Date().toISOString();
@@ -137,7 +137,7 @@ export class TFTimesService {
           id,
           title,
           description: '', // 暂时不提取描述
-          link: fullLink,
+          link,
           source: `TFT Times`,
           category: this.getCategoryName(category),
           publishedAt: new Date(pubDate),
