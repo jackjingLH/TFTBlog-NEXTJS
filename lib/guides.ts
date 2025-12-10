@@ -10,10 +10,10 @@ export interface GuideMetadata {
   slug: string;
   title: string;
   description: string;
-  author: string;
-  date: string;
+  source: string;
   category: string;
   tags: string[];
+  cover?: string;
 }
 
 // 完整攻略数据接口
@@ -32,31 +32,94 @@ export function getAllGuideSlugs(): string[] {
 }
 
 /**
+ * 获取攻略目录下的 Markdown 文件路径
+ */
+function getGuideMarkdownPath(slug: string): string | null {
+  const guideDir = path.join(guidesDirectory, slug);
+  const files = fs.readdirSync(guideDir);
+  const mdFile = files.find(file => file.endsWith('.md'));
+  return mdFile ? path.join(guideDir, mdFile) : null;
+}
+
+/**
+ * 解析 Markdown 文件的元数据
+ * 从 HTML 注释提取 tags, cover
+ * 从第一个 # 标题提取 title
+ * 从最后一行提取来源
+ */
+function parseGuideMetadata(content: string, slug: string) {
+  const lines = content.split('\n');
+
+  // 提取 HTML 注释中的数据
+  let tags: string[] = [];
+  let cover: string | undefined;
+
+  for (const line of lines) {
+    const tagsMatch = line.match(/<!--\s*tags:\s*(.+?)\s*-->/);
+    if (tagsMatch) {
+      tags = tagsMatch[1].split(',').map(t => t.trim());
+    }
+
+    const coverMatch = line.match(/<!--\s*cover:\s*(.+?)\s*-->/);
+    if (coverMatch) {
+      cover = coverMatch[1].trim();
+    }
+  }
+
+  // 提取第一个 # 标题
+  let title = 'Untitled';
+  const titleMatch = content.match(/^#\s+(.+)$/m);
+  if (titleMatch) {
+    title = titleMatch[1].trim();
+  }
+
+  // 提取最后一行的来源
+  let source = 'Unknown';
+  const lastLine = lines[lines.length - 1].trim();
+  const sourceMatch = lastLine.match(/来源:\s*(.+)/);
+  if (sourceMatch) {
+    source = sourceMatch[1].trim();
+  }
+
+  // 提取描述（第一个二级标题后的第一段）
+  let description = '';
+  const descMatch = content.match(/##[^\n]*\n+([^\n]+)/);
+  if (descMatch) {
+    description = descMatch[1].replace(/\*\*\*/g, '').replace(/<u>/g, '').replace(/<\/u>/g, '').trim();
+  }
+
+  return {
+    title,
+    description,
+    source,
+    tags,
+    cover,
+    category: tags[0] || 'Other', // 使用第一个标签作为分类
+  };
+}
+
+/**
  * 获取所有攻略的元数据
  */
 export function getAllGuides(): GuideMetadata[] {
   const slugs = getAllGuideSlugs();
 
   const guides = slugs.map(slug => {
-    const fullPath = path.join(guidesDirectory, slug, 'index.md');
+    const fullPath = getGuideMarkdownPath(slug);
+    if (!fullPath) {
+      return null;
+    }
+
     const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data } = matter(fileContents);
+    const metadata = parseGuideMetadata(fileContents, slug);
 
     return {
       slug,
-      title: data.title || 'Untitled',
-      description: data.description || '',
-      author: data.author || 'Unknown',
-      date: data.date || new Date().toISOString(),
-      category: data.category || 'Other',
-      tags: data.tags || []
+      ...metadata
     } as GuideMetadata;
-  });
+  }).filter(Boolean) as GuideMetadata[];
 
-  // 按日期排序（最新的在前）
-  return guides.sort((a, b) => {
-    return new Date(b.date).getTime() - new Date(a.date).getTime();
-  });
+  return guides;
 }
 
 /**
@@ -64,18 +127,26 @@ export function getAllGuides(): GuideMetadata[] {
  */
 export function getGuideBySlug(slug: string): GuideData | null {
   try {
-    const fullPath = path.join(guidesDirectory, slug, 'index.md');
+    const fullPath = getGuideMarkdownPath(slug);
+    if (!fullPath) {
+      console.error(`No markdown file found for guide: ${slug}`);
+      return null;
+    }
+
     const fileContents = fs.readFileSync(fullPath, 'utf8');
-    const { data, content } = matter(fileContents);
+    const metadata = parseGuideMetadata(fileContents, slug);
+
+    // 移除最后一行的来源信息（因为会单独显示）
+    let content = fileContents;
+    const lines = content.split('\n');
+    if (lines[lines.length - 1].trim().startsWith('来源:')) {
+      lines.pop();
+      content = lines.join('\n');
+    }
 
     return {
       slug,
-      title: data.title || 'Untitled',
-      description: data.description || '',
-      author: data.author || 'Unknown',
-      date: data.date || new Date().toISOString(),
-      category: data.category || 'Other',
-      tags: data.tags || [],
+      ...metadata,
       content
     };
   } catch (error) {

@@ -1,0 +1,43 @@
+{
+  "mdFile": "D:\\game\\code\\convertTFT\\TFT\\TFT.md",
+  "outputDir": "D:\\game\\code\\convertTFT\\TFT\\output",
+  "fullImage": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_full.png",
+  "splitImages": [
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part1_of_5.png",
+      "filename": "TFT_part1_of_5.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 714.9
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part2_of_5.png",
+      "filename": "TFT_part2_of_5.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 378.6
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part3_of_5.png",
+      "filename": "TFT_part3_of_5.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 304.8
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part4_of_5.png",
+      "filename": "TFT_part4_of_5.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 504
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part5_of_5.png",
+      "filename": "TFT_part5_of_5.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 97.6
+    }
+  ],
+  "timestamp": "2025-12-10T03:55:59.188Z"
+}
