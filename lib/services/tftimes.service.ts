@@ -51,8 +51,8 @@ export class TFTimesService {
       new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
     );
 
-    // 只取最新的 20 篇
-    const finalArticles = recentArticles.slice(0, 20);
+    // 只取最新的 5 篇
+    const finalArticles = recentArticles.slice(0, 5);
 
     console.log(`[TFTimes] 获取完成，共 ${finalArticles.length} 篇文章`);
     return finalArticles;
@@ -91,7 +91,7 @@ export class TFTimesService {
   private static parseArticlesFromHTML(html: string, category: string): FeedArticle[] {
     const articles: FeedArticle[] = [];
 
-    // 查找文章列表 - 使用 entry-card 类
+    // 查找文章列表 - 使用 entry-card 类的 article 标签
     const articlePattern = /<article[^>]*class="[^"]*entry-card[^"]*"[^>]*>[\s\S]*?<\/article>/gs;
     const matches = html.match(articlePattern);
 
@@ -101,7 +101,7 @@ export class TFTimesService {
     for (let i = 0; i < matches.length; i++) {
       const articleHTML = matches[i];
       try {
-        // 提取标题（没有 a 标签）
+        // ��取标题（没有 a 标签）
         const titleMatch = articleHTML.match(/<h2[^>]*class="[^"]*entry-card-title[^"]*"[^>]* itemprop="headline">(.*?)<\/h2>/s);
         if (!titleMatch) {
           console.log(`[TFTimes] 文章 ${i}: 未能匹配标题`);
@@ -109,6 +109,13 @@ export class TFTimesService {
         }
 
         const title = this.cleanText(titleMatch[1]);
+
+        // 提取描述
+        let description = '';
+        const descMatch = articleHTML.match(/<div[^>]*class="[^"]*entry-card-snippet[^"]*"[^>]*>(.*?)<\/div>/s);
+        if (descMatch) {
+          description = this.cleanText(descMatch[1]);
+        }
 
         // 提取文章 ID
         const idMatch = articleHTML.match(/id="post-(\d+)"/);
@@ -136,9 +143,10 @@ export class TFTimesService {
         articles.push({
           id,
           title,
-          description: '', // 暂时不提取描述
+          description, // 现在提取描述
           link,
-          source: `TFT Times`,
+          platform: 'TFTimes',              // 平台（个人攻略网站）
+          author: 'TFTimes',                // 作者（个人攻略网站）
           category: this.getCategoryName(category),
           publishedAt: new Date(pubDate),
           fetchedAt: new Date(),

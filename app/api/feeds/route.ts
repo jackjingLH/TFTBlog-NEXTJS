@@ -1,111 +1,75 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CacheService } from '@/lib/services/cache.service';
-import { RSSHubService } from '@/lib/services/rsshub.service';
-import { TFTimesService } from '@/lib/services/tftimes.service';
+import dbConnect from '@/lib/mongodb';
+import Article from '@/models/Article';
 import { FeedResponse } from '@/types/feed';
 
 /**
  * GET /api/feeds
- * 获取文章聚合列表
+ * 获取文章聚合列表（从数据库读取）
+ * @see CLAUDE.md 文档同步规则
  *
  * Query参数:
  * - page: 页码 (默认 1)
  * - limit: 每页数量 (默认 20)
- * - source: 来源筛选 (NGA/TapTap/Bilibili/17173，可选)
+ * - platform: 平台筛选 (可选)
+ * - author: 作者筛选 (可选)
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
-    const source = searchParams.get('source');
-    const refresh = searchParams.get('refresh') === '1';
+    const platform = searchParams.get('platform');
+    const author = searchParams.get('author');
 
-    // 1. 如果要求刷新，清除缓存
-    if (refresh) {
-      CacheService.clear();
-    }
+    // 连接数据库
+    await dbConnect();
 
-    // 2. 尝试从内存缓存读取
-    let articles = CacheService.get();
-    let cached = true;
+    // 构建查询条件
+    const query: any = {};
+    if (platform) query.platform = platform;
+    if (author) query.author = author;
 
-    // 3. 缓存未命中，从数据源获取并缓存
-    if (!articles) {
-      console.log('[API] 缓存未命中，从 RSSHub 获取数据...');
-      cached = false;
+    // 查询文章（按发布时间降序）
+    const articles = await Article.find(query)
+      .sort({ publishedAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean();
 
-      try {
-        // 并行获取所有数据源
-        const [rsshubArticles, tftimesArticles] = await Promise.allSettled([
-          RSSHubService.fetchAll(),
-          TFTimesService.fetchAll()
-        ]);
+    // 统计总数
+    const total = await Article.countDocuments(query);
 
-        // 合并结果
-        articles = [];
+    // 转换为前端需要的格式
+    const data = articles.map((article: any) => ({
+      id: article.id,
+      title: article.title,
+      description: article.description,
+      link: article.link,
+      platform: article.platform,
+      author: article.author,
+      category: article.category,
+      publishedAt: article.publishedAt,
+      fetchedAt: article.fetchedAt,
+    }));
 
-        if (rsshubArticles.status === 'fulfilled') {
-          articles.push(...rsshubArticles.value);
-        } else {
-          console.error('[API] RSSHub 获取失败:', rsshubArticles.reason);
-        }
-
-        if (tftimesArticles.status === 'fulfilled') {
-          articles.push(...tftimesArticles.value);
-        } else {
-          console.error('[API] TFTimes 获取失败:', tftimesArticles.reason);
-        }
-
-        articles = RSSHubService.deduplicateArticles(articles);
-        CacheService.set(articles);
-      } catch (error) {
-        console.error('[API] 获取文章失败:', error);
-        return NextResponse.json(
-          {
-            status: 'error',
-            message: '获取文章失败，请稍后重试',
-            data: [],
-            total: 0,
-            page: 1,
-            pageSize: limit,
-            cached: false,
-          } as FeedResponse,
-          { status: 500 }
-        );
-      }
-    }
-
-    // 3. 按来源筛选
-    let filteredArticles = articles;
-    if (source) {
-      filteredArticles = RSSHubService.filterBySource(articles, source);
-    }
-
-    // 4. 分页
-    const total = filteredArticles.length;
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedArticles = filteredArticles.slice(startIndex, endIndex);
-
-    // 5. 返回响应
+    // 返回响应
     const response: FeedResponse = {
       status: 'success',
-      data: paginatedArticles,
+      data,
       total,
       page,
       pageSize: limit,
-      cached,
-      lastUpdated: CacheService.getLastUpdated() || undefined,
+      cached: false, // 数据库读取，始终是最新的
     };
 
     return NextResponse.json(response);
-  } catch (error) {
+  } catch (error: any) {
     console.error('[API] 处理请求失败:', error);
     return NextResponse.json(
       {
         status: 'error',
-        message: '服务器错误',
+        message: '服务器错误: ' + error.message,
         data: [],
         total: 0,
         page: 1,

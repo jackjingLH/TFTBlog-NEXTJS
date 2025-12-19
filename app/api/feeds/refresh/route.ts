@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CacheService } from '@/lib/services/cache.service';
+import dbConnect from '@/lib/mongodb';
+import Article from '@/models/Article';
 import { RSSHubService } from '@/lib/services/rsshub.service';
+import { TFTimesService } from '@/lib/services/tftimes.service';
 
 /**
  * POST /api/feeds/refresh
- * 手动刷新文章数据（清除缓存并重新获取）
+ * 手动触发抓取文章并保存到数据库
+ * @see CLAUDE.md 文档同步规则
  *
- * 需要提供 x-api-key 请求头进行验证
+ * 可选：提供 x-api-key 请求头进行验证
  */
 export async function POST(request: NextRequest) {
   try {
@@ -24,36 +27,101 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[API] 开始手动刷新文章数据...');
+    console.log('[API/Refresh] 开始手动刷新文章数据...');
 
-    // 1. 清除旧缓存
-    CacheService.clear();
+    // 连接数据库
+    await dbConnect();
 
-    // 2. 从 RSSHub 获取最新数据
-    const articles = await RSSHubService.fetchAll();
+    const allArticles = [];
+    const stats = {
+      rsshub: 0,
+      tftimes: 0,
+      total: 0,
+      new: 0,
+      updated: 0,
+      failed: 0,
+    };
 
-    // 3. 去重
-    const uniqueArticles = RSSHubService.deduplicateArticles(articles);
+    // 1. 并行获取所有数据源
+    const [rsshubResult, tftimesResult] = await Promise.allSettled([
+      RSSHubService.fetchAll(),
+      TFTimesService.fetchAll(),
+    ]);
 
-    // 4. 更新缓存
-    CacheService.set(uniqueArticles);
+    // 2. 处理 RSSHub 结果
+    if (rsshubResult.status === 'fulfilled') {
+      allArticles.push(...rsshubResult.value);
+      stats.rsshub = rsshubResult.value.length;
+      console.log(`[API/Refresh] RSSHub 获取成功：${stats.rsshub} 篇`);
+    } else {
+      console.error('[API/Refresh] RSSHub 获取失败:', rsshubResult.reason);
+      stats.failed++;
+    }
 
-    console.log('[API] 刷新完成，共', uniqueArticles.length, '篇文章');
+    // 3. 处理 TFTimes 结果
+    if (tftimesResult.status === 'fulfilled') {
+      allArticles.push(...tftimesResult.value);
+      stats.tftimes = tftimesResult.value.length;
+      console.log(`[API/Refresh] TFTimes 获取成功：${stats.tftimes} 篇`);
+    } else {
+      console.error('[API/Refresh] TFTimes 获取失败:', tftimesResult.reason);
+      stats.failed++;
+    }
+
+    stats.total = allArticles.length;
+
+    // 4. 去重并保存到数据库
+    console.log(`[API/Refresh] 开始保存 ${stats.total} 篇文章到数据库...`);
+
+    for (const article of allArticles) {
+      try {
+        const existingArticle = await Article.findOne({ id: article.id });
+        const isNew = !existingArticle;
+
+        await Article.findOneAndUpdate(
+          { id: article.id },
+          {
+            id: article.id,
+            title: article.title,
+            description: article.description || '',
+            link: article.link,
+            platform: article.platform,
+            author: article.author,
+            category: article.category || '',
+            publishedAt: article.publishedAt,
+            fetchedAt: article.fetchedAt,
+          },
+          {
+            upsert: true,
+            new: true,
+            setDefaultsOnInsert: true,
+          }
+        );
+
+        if (isNew) {
+          stats.new++;
+        } else {
+          stats.updated++;
+        }
+      } catch (error: any) {
+        console.error(`[API/Refresh] 保存文章失败 [${article.id}]:`, error.message);
+      }
+    }
+
+    console.log('[API/Refresh] 刷新完成！统计信息:', stats);
 
     return NextResponse.json({
       status: 'success',
-      message: '刷新成功',
-      count: uniqueArticles.length,
-      updatedAt: new Date(),
-      sources: RSSHubService.getSources(),
+      message: '文章刷新成功',
+      stats,
+      timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('[API] 刷新失败:', error);
-
+    console.error('[API/Refresh] 刷新失败:', error);
     return NextResponse.json(
       {
         status: 'error',
-        message: `刷新失败: ${error.message}`,
+        message: '刷新失败: ' + error.message,
       },
       { status: 500 }
     );
@@ -65,15 +133,41 @@ export async function POST(request: NextRequest) {
  * 获取刷新状态信息
  */
 export async function GET() {
-  const lastUpdated = CacheService.getLastUpdated();
-  const ttl = CacheService.getTTL();
-  const isValid = CacheService.isValid();
+  try {
+    await dbConnect();
 
-  return NextResponse.json({
-    status: 'success',
-    cached: isValid,
-    lastUpdated: lastUpdated,
-    ttlSeconds: ttl,
-    sources: RSSHubService.getSources(),
-  });
+    const totalArticles = await Article.countDocuments();
+    const latestArticle = await Article.findOne().sort({ fetchedAt: -1 });
+
+    // 统计各平台数量
+    const platformStats = await Article.aggregate([
+      {
+        $group: {
+          _id: '$platform',
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $sort: { count: -1 },
+      },
+    ]);
+
+    return NextResponse.json({
+      status: 'success',
+      totalArticles,
+      lastFetchedAt: latestArticle?.fetchedAt || null,
+      platforms: platformStats.map((s) => ({
+        name: s._id,
+        count: s.count,
+      })),
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        status: 'error',
+        message: error.message,
+      },
+      { status: 500 }
+    );
+  }
 }

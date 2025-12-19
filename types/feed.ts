@@ -4,7 +4,8 @@ export interface FeedArticle {
   title: string;           // 文章标题
   description: string;     // 摘要/描述
   link: string;            // 跳转链接
-  source: string;          // 来源 (NGA/TapTap/Bilibili等)
+  platform: string;        // 平台 (B站/TFTimes/YouTube等)
+  author: string;          // 作者/UP主名称
   category?: string;       // 分类（可选）
   publishedAt: Date;       // 发布时间
   fetchedAt: Date;         // 抓取时间
@@ -18,9 +19,11 @@ export interface FeedCache {
 
 // RSS源配置
 export interface RSSSource {
-  name: string;            // 源名称
+  name: string;            // 源名称（用于显示）
   url: string;             // RSSHub URL
-  source: string;          // 来源标识
+  platform: string;        // 平台标识 (B站/TFTimes/YouTube等)
+  author: string;          // 作者/UP主名称
+  category?: string;       // 分类（可选）
 }
 
 // API响应结构

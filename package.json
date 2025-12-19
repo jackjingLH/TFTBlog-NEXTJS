@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "cheerio": "^1.1.2",
     "fast-xml-parser": "^5.3.2",
     "gray-matter": "^4.0.3",
     "mongoose": "^8.20.1",

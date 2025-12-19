@@ -11,22 +11,22 @@ export default function FeedList({ initialLimit = 10 }: FeedListProps) {
   const [articles, setArticles] = useState<FeedArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedSource, setSelectedSource] = useState<string>('all');
+  const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const sources = ['all', '荡狗天天开心', '手刃猫咪', '襄平霸王东'];
+  const platforms = ['all', 'B站', 'TFTimes'];
 
   // 获取文章数据
-  const fetchArticles = async (source: string = 'all') => {
+  const fetchArticles = async (platform: string = 'all') => {
     setLoading(true);
     setError('');
 
     try {
       const url =
-        source === 'all'
+        platform === 'all'
           ? `/api/feeds?limit=${initialLimit}`
-          : `/api/feeds?source=${source}&limit=${initialLimit}`;
+          : `/api/feeds?platform=${platform}&limit=${initialLimit}`;
 
       const res = await fetch(url);
       const data = await res.json();
@@ -49,13 +49,13 @@ export default function FeedList({ initialLimit = 10 }: FeedListProps) {
 
   // 页面加载时获取数据
   useEffect(() => {
-    fetchArticles(selectedSource);
+    fetchArticles(selectedPlatform);
   }, []);
 
-  // 切换数据源
-  const handleSourceChange = (source: string) => {
-    setSelectedSource(source);
-    fetchArticles(source);
+  // 切换平台
+  const handlePlatformChange = (platform: string) => {
+    setSelectedPlatform(platform);
+    fetchArticles(platform);
   };
 
   // 手动刷新数据
@@ -133,19 +133,19 @@ export default function FeedList({ initialLimit = 10 }: FeedListProps) {
         </button>
       </div>
 
-      {/* 来源筛选 */}
+      {/* 平台筛选 */}
       <div className="flex flex-wrap gap-2 mb-6">
-        {sources.map((source) => (
+        {platforms.map((platform) => (
           <button
-            key={source}
-            onClick={() => handleSourceChange(source)}
+            key={platform}
+            onClick={() => handlePlatformChange(platform)}
             className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
-              selectedSource === source
+              selectedPlatform === platform
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            {source === 'all' ? '全部' : source}
+            {platform === 'all' ? '全部' : platform}
           </button>
         ))}
       </div>
@@ -192,7 +192,10 @@ export default function FeedList({ initialLimit = 10 }: FeedListProps) {
                   </p>
                   <div className="flex items-center gap-3 text-xs text-gray-500">
                     <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">
-                      {article.source}
+                      {article.platform}
+                    </span>
+                    <span className="text-gray-600">
+                      {article.author}
                     </span>
                     <span>{formatTime(article.publishedAt)}</span>
                   </div>
