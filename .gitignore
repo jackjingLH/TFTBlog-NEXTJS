@@ -45,3 +45,9 @@ logs/
 
 # claude code local settings
 .claude/
+.mongodb-credentials.txt
+
+# security scripts with credentials
+scripts/secure-mongodb*.sh
+scripts/restore-database.*
+scripts/*-restore-data.js

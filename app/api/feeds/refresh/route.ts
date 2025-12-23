@@ -70,7 +70,19 @@ export async function POST(request: NextRequest) {
 
     stats.total = allArticles.length;
 
-    // 4. 去重并保存到数据库
+    // 4. 清理30天前的旧数据
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const deleteResult = await Article.deleteMany({
+      publishedAt: { $lt: thirtyDaysAgo }
+    });
+
+    if (deleteResult.deletedCount > 0) {
+      console.log(`[API/Refresh] 清理了 ${deleteResult.deletedCount} 篇30天前的文章`);
+    }
+
+    // 5. 去重并保存到数据库
     console.log(`[API/Refresh] 开始保存 ${stats.total} 篇文章到数据库...`);
 
     for (const article of allArticles) {

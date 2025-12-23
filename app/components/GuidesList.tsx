@@ -95,9 +95,13 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
     : platforms.find(p => p.id === selectedPlatform)?.authors || [];
 
   // 获取文章数据
-  const fetchArticles = async (forceRefresh = false) => {
+  const fetchArticles = async (forceRefresh = false, platform?: string, author?: string) => {
     setLoading(true);
     setError('');
+
+    // 使用传入的参数，如果没有则使用当前状态
+    const filterPlatform = platform !== undefined ? platform : selectedPlatform;
+    const filterAuthor = author !== undefined ? author : selectedAuthor;
 
     try {
       let allArticles: FeedArticle[] = [];
@@ -125,35 +129,35 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
       // 根据筛选条件过滤文章
       let filteredArticles = [...allArticles];
 
-      if (selectedPlatform !== 'all') {
-        if (selectedPlatform === 'tftimes') {
+      if (filterPlatform !== 'all') {
+        if (filterPlatform === 'tftimes') {
           // 只显示 TFTimes 数据
           filteredArticles = filteredArticles.filter(article =>
             article.platform === 'TFTimes'
           );
 
           // 根据选择的作者（分类）进一步过滤
-          if (selectedAuthor !== 'all') {
+          if (filterAuthor !== 'all') {
             const categoryMap: Record<string, string> = {
               'official': '新闻',
               'strategy': '攻略',
               'news': '新闻'
             };
-            const targetCategory = categoryMap[selectedAuthor];
+            const targetCategory = categoryMap[filterAuthor];
             if (targetCategory) {
               filteredArticles = filteredArticles.filter(article =>
                 article.category === targetCategory
               );
             }
           }
-        } else if (selectedPlatform === 'bilibili') {
+        } else if (filterPlatform === 'bilibili') {
           // 只显示 B 站数据
           filteredArticles = filteredArticles.filter(article =>
             article.platform === 'B站'
           );
 
           // 根据选择的博主进一步过滤
-          if (selectedAuthor !== 'all') {
+          if (filterAuthor !== 'all') {
             // 目前只有一个博主，后续可以根据需要扩展
             const authorMap: Record<string, string> = {
               'tft_master': '云顶大师兄',
@@ -205,8 +209,8 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
     setSelectedPlatform(platformId);
     setSelectedAuthor('all'); // 重置作者选择
     setShowAuthorDropdown(false);
-    // 重新获取数据
-    fetchArticles();
+    // 重新获取数据 - 传入新的平台和重置的作者参数
+    fetchArticles(false, platformId, 'all');
   };
 
   // 切换作者
@@ -214,8 +218,8 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
     console.log('[GuidesList] Author changed to:', authorId);
     setSelectedAuthor(authorId);
     setShowAuthorDropdown(false);
-    // 重新获取数据
-    fetchArticles();
+    // 重新获取数据 - 传入当前平台和新的作者参数
+    fetchArticles(false, selectedPlatform, authorId);
   };
 
   // 手动刷新数据 - 强制刷新模式
