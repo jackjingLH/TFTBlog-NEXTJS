@@ -13,7 +13,6 @@ export default function FeedList({ initialLimit = 10 }: FeedListProps) {
   const [error, setError] = useState('');
   const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   const platforms = ['all', 'B站', 'TFTimes'];
 
@@ -58,31 +57,6 @@ export default function FeedList({ initialLimit = 10 }: FeedListProps) {
     fetchArticles(platform);
   };
 
-  // 手动刷新数据
-  const handleRefresh = async () => {
-    setRefreshing(true);
-
-    try {
-      const res = await fetch('/api/feeds/refresh', {
-        method: 'POST',
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        // 刷新成功，重新获取文章
-        await fetchArticles(selectedSource);
-        alert(`✅ 刷新成功！共获取 ${data.count} 篇文章`);
-      } else {
-        alert(`❌ 刷新失败: ${data.message}`);
-      }
-    } catch (error: any) {
-      alert(`❌ 刷新失败: ${error.message}`);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   // 格式化时间
   const formatTime = (date: Date) => {
     const now = new Date();
@@ -109,28 +83,6 @@ export default function FeedList({ initialLimit = 10 }: FeedListProps) {
             </p>
           )}
         </div>
-
-        {/* 刷新按钮 */}
-        <button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          className="mt-4 sm:mt-0 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
-        >
-          <svg
-            className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          {refreshing ? '刷新中...' : '刷新数据'}
-        </button>
       </div>
 
       {/* 平台筛选 */}

@@ -13,30 +13,42 @@
  * 注意：运行前请确保已切换到可用的代理IP
  */
 
+// 加载环境变量
+require('dotenv').config({ path: '.env.local' });
+
 const http = require('http');
 const https = require('https');
+const { MongoClient } = require('mongodb');
 
 // ============================================================
 // 配置
 // ============================================================
 const CONFIG = {
+  // MongoDB 配置
+  MONGODB_URI: process.env.MONGODB_URI || 'mongodb://47.99.202.3:27017/tftblog',
+
   // RSSHub 实例地址
   RSSHUB_URL: 'http://localhost:1200',
+
+  // B站Cookie（用于RSSHub获取数据）
+  BILIBILI_COOKIE: process.env.BILIBILI_COOKIE || '',
 
   // UP主列表（按粉丝数排序，大V在前可能有优势）
   UP_MASTERS: [
     { uid: '18343134', name: '林小北Lindo', fans: '186万' },
     { uid: '388063772', name: 'GoDlike_神超', fans: '84.46万' },
     { uid: '262943792', name: '手刃猫咪', fans: '15.69万' },
+    { uid: '14306063', name: '兔子解说JokerTu', fans: '待更新' },
+    { uid: '37452208', name: '襄平霸王东', fans: '待更新' },
+    { uid: '3546666107931417', name: '云顶风向标', fans: '待更新' },
   ],
 
   // 重试配置
   INITIAL_INTERVAL: 15000,    // 初始间隔：15秒
   MAX_RETRIES: 10,             // 最大重试次数
   INTERVAL_MULTIPLIER: 2,      // 间隔倍增系数
-
-  // API配置
-  API_URL: 'http://localhost:3000/api/feeds/refresh-single',
+  MAX_INTERVAL: 60000,         // 最大间隔：60秒（第3轮后不再增加）
+  RANDOM_OFFSET: 2000,         // 随机波动：±2秒
   API_TIMEOUT: 30000,          // API超时：30秒
 };
 
@@ -63,13 +75,14 @@ class UPMasterTracker {
     return this.pending;
   }
 
-  markSuccess(uid) {
+  markSuccess(uid, saveResult = null) {
     const index = this.pending.findIndex(up => up.uid === uid);
     if (index !== -1) {
       const up = this.pending.splice(index, 1)[0];
       this.succeeded.push({
         ...up,
         finalRetries: up.retries,
+        saveResult, // 保存结果统计 { articleCount, newCount, updateCount, failedCount }
       });
       return true;
     }
@@ -148,9 +161,17 @@ function httpRequest(url, options = {}) {
     const urlObj = new URL(url);
     const client = urlObj.protocol === 'https:' ? https : http;
 
+    // 如果是RSSHub请求，添加B站Cookie
+    const headers = { ...options.headers };
+    if (url.includes('rsshub') || url.includes('localhost:1200')) {
+      if (CONFIG.BILIBILI_COOKIE) {
+        headers['Cookie'] = CONFIG.BILIBILI_COOKIE;
+      }
+    }
+
     const req = client.request(url, {
       method: options.method || 'GET',
-      headers: options.headers || {},
+      headers,
       timeout: options.timeout || 30000,
     }, (res) => {
       let data = '';
@@ -183,12 +204,13 @@ function httpRequest(url, options = {}) {
 }
 
 // ============================================================
-// RSSHub API 调用
+// RSSHub API 调用 + 立即保存（一次请求完成）
 // ============================================================
-async function fetchUPMaster(uid) {
-  const url = `${CONFIG.RSSHUB_URL}/bilibili/user/video/${uid}`;
+async function fetchAndSaveUPMaster(up, collection) {
+  const url = `${CONFIG.RSSHUB_URL}/bilibili/user/video/${up.uid}`;
 
   try {
+    // 1. 从RSSHub获取数据
     const response = await httpRequest(url, {
       timeout: CONFIG.API_TIMEOUT,
       headers: {
@@ -214,10 +236,128 @@ async function fetchUPMaster(uid) {
       throw new Error('无效的响应格式');
     }
 
-    return { success: true };
+    // 2. 解析RSS数据
+    const articles = parseRSSFeed(response.body, up.name);
+    if (articles.length === 0) {
+      console.log(`   ⚠️  ${up.name}: 未找到文章`);
+      return { success: true, articleCount: 0, newCount: 0, updateCount: 0 };
+    }
+
+    // 3. 立即保存到数据库
+    let newCount = 0;
+    let updateCount = 0;
+    let failedCount = 0;
+
+    for (const article of articles) {
+      try {
+        const existingArticle = await collection.findOne({ id: article.id });
+        const isNew = !existingArticle;
+
+        await collection.updateOne(
+          { id: article.id },
+          { $set: article },
+          { upsert: true }
+        );
+
+        if (isNew) {
+          newCount++;
+        } else {
+          updateCount++;
+        }
+      } catch (error) {
+        console.error(`   ❌ 保存失败 [${article.id}]:`, error.message);
+        failedCount++;
+      }
+    }
+
+    // 4. 显示保存结果
+    console.log(`   ✅ 已保存: ${articles.length}篇 (新增:${newCount} 更新:${updateCount}${failedCount > 0 ? ` 失败:${failedCount}` : ''})`);
+
+    return {
+      success: true,
+      articleCount: articles.length,
+      newCount,
+      updateCount,
+      failedCount
+    };
   } catch (error) {
     throw error;
   }
+}
+
+// ============================================================
+// RSS 解析函数
+// ============================================================
+function parseRSSFeed(xmlText, authorName) {
+  const articles = [];
+
+  try {
+    // 提取所有 <item> 标签
+    const itemPattern = /<item>([\s\S]*?)<\/item>/g;
+    const items = xmlText.match(itemPattern);
+
+    if (!items) return articles;
+
+    for (const item of items) {
+      try {
+        // 提取标题（支持 CDATA 和普通格式）
+        let title = '';
+        const titleCDATAMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/);
+        const titlePlainMatch = item.match(/<title>(.*?)<\/title>/);
+
+        if (titleCDATAMatch) {
+          title = titleCDATAMatch[1];
+        } else if (titlePlainMatch) {
+          title = titlePlainMatch[1];
+        }
+
+        // 提取链接
+        const linkMatch = item.match(/<link>(.*?)<\/link>/);
+        const link = linkMatch ? linkMatch[1] : '';
+
+        // 提取描述（支持 CDATA 和普通格式）
+        let description = '';
+        const descCDATAMatch = item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/s);
+        const descPlainMatch = item.match(/<description>(.*?)<\/description>/s);
+
+        if (descCDATAMatch) {
+          description = descCDATAMatch[1].replace(/<[^>]*>/g, '').substring(0, 200);
+        } else if (descPlainMatch) {
+          description = descPlainMatch[1].replace(/<[^>]*>/g, '').substring(0, 200);
+        }
+
+        // 提取发布日期
+        const pubDateMatch = item.match(/<pubDate>(.*?)<\/pubDate>/);
+        const publishedAt = pubDateMatch ? new Date(pubDateMatch[1]) : new Date();
+
+        // 从链接提取视频ID作为文章ID
+        const videoIdMatch = link.match(/\/video\/(BV[a-zA-Z0-9]+)/);
+        const videoId = videoIdMatch ? videoIdMatch[1] : '';
+        const id = `bilibili-${videoId}`;
+
+        if (title && link && videoId) {
+          articles.push({
+            id,
+            title,
+            description,
+            link,
+            platform: 'Bilibili',
+            author: authorName,
+            category: '视频',
+            publishedAt,
+            fetchedAt: new Date(),
+          });
+        }
+      } catch (error) {
+        console.error('[RSS Parser] 解析文章项失败:', error.message);
+      }
+    }
+  } catch (error) {
+    console.error('[RSS Parser] 解析RSS失败:', error.message);
+  }
+
+  // 只返回最新的 5 条
+  return articles.slice(0, 5);
 }
 
 // ============================================================
@@ -231,92 +371,116 @@ function sleep(ms) {
 // 主函数
 // ============================================================
 async function main() {
-  console.log('🚀 B站数据智能抓取脚本');
-  console.log('='.repeat(60));
-  console.log(`RSSHub: ${CONFIG.RSSHUB_URL}`);
-  console.log(`初始间隔: ${CONFIG.INITIAL_INTERVAL / 1000}秒`);
-  console.log(`最大重试: ${CONFIG.MAX_RETRIES}次`);
-  console.log(`UP主数量: ${CONFIG.UP_MASTERS.length}`);
-  console.log('='.repeat(60));
-  console.log('');
+  let client;
 
-  // 初始化追踪器
-  const tracker = new UPMasterTracker(CONFIG.UP_MASTERS);
+  try {
+    console.log('🚀 B站数据智能抓取脚本（优化版：一次请求+立即保存）');
+    console.log('='.repeat(60));
+    console.log(`RSSHub: ${CONFIG.RSSHUB_URL}`);
+    console.log(`初始间隔: ${CONFIG.INITIAL_INTERVAL / 1000}秒`);
+    console.log(`最大重试: ${CONFIG.MAX_RETRIES}次`);
+    console.log(`UP主数量: ${CONFIG.UP_MASTERS.length}`);
+    console.log('='.repeat(60));
+    console.log('');
 
-  let round = 0;
-  let currentInterval = CONFIG.INITIAL_INTERVAL;
+    // 连接数据库
+    console.log('💾 连接数据库...');
+    client = await MongoClient.connect(CONFIG.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
+    const db = client.db();
+    const collection = db.collection('articles');  // 使用articles集合
+    console.log('✅ 数据库已连接\n');
 
-  while (tracker.hasPending() && round < CONFIG.MAX_RETRIES) {
-    round++;
-    const pending = tracker.getPending();
+    // 初始化追踪器
+    const tracker = new UPMasterTracker(CONFIG.UP_MASTERS);
 
-    console.log(`\n🔄 第 ${round} 轮尝试 (间隔: ${currentInterval / 1000}秒)`);
-    console.log(`待处理: ${pending.map(up => up.name).join(', ')}`);
-    console.log('-'.repeat(60));
+    let round = 0;
+    let currentInterval = CONFIG.INITIAL_INTERVAL;
 
-    for (const up of pending) {
-      console.log(`\n[${up.name}] 开始抓取...`);
+    while (tracker.hasPending() && round < CONFIG.MAX_RETRIES) {
+      round++;
+      const pending = tracker.getPending();
 
-      try {
-        await fetchUPMaster(up.uid);
-        console.log(`✅ [${up.name}] 成功！`);
-        tracker.markSuccess(up.uid);
-      } catch (error) {
-        const errorMsg = error.message || '未知错误';
-        console.log(`❌ [${up.name}] 失败: ${errorMsg}`);
+      console.log(`\n🔄 第 ${round} 轮尝试 (间隔: ${currentInterval / 1000}秒)`);
+      console.log(`待处理: ${pending.map(up => up.name).join(', ')}`);
+      console.log('-'.repeat(60));
 
-        const shouldRetry = tracker.markRetry(up.uid, errorMsg);
-        if (!shouldRetry) {
-          console.log(`⚠️  [${up.name}] 已达最大重试次数，放弃`);
+      for (const up of pending) {
+        console.log(`\n[${up.name}] 开始抓取并保存...`);
+
+        try {
+          // 一次请求完成：获取RSS + 解析 + 保存
+          const result = await fetchAndSaveUPMaster(up, collection);
+
+          console.log(`✅ [${up.name}] 成功！`);
+          tracker.markSuccess(up.uid, result); // 保存结果统计
+        } catch (error) {
+          const errorMsg = error.message || '未知错误';
+          console.log(`❌ [${up.name}] 失败: ${errorMsg}`);
+
+          const shouldRetry = tracker.markRetry(up.uid, errorMsg);
+          if (!shouldRetry) {
+            console.log(`⚠️  [${up.name}] 已达最大重试次数，放弃`);
+          }
+        }
+
+        // 同一轮内的UP主之间也要间隔
+        if (pending.indexOf(up) < pending.length - 1) {
+          // 添加随机波动，避免规律性被检测
+          const randomOffset = Math.floor(Math.random() * CONFIG.RANDOM_OFFSET * 2) - CONFIG.RANDOM_OFFSET;
+          const actualInterval = currentInterval + randomOffset;
+          console.log(`⏱️  等待 ${(actualInterval / 1000).toFixed(1)} 秒...`);
+          await sleep(actualInterval);
         }
       }
 
-      // 同一轮内的UP主之间也要间隔
-      if (pending.indexOf(up) < pending.length - 1) {
-        console.log(`⏱️  等待 ${currentInterval / 1000} 秒...`);
-        await sleep(currentInterval);
+      // 如果还有待处理的，准备下一轮
+      if (tracker.hasPending()) {
+        // 递增间隔时间，但不超过最大值
+        const nextInterval = currentInterval * CONFIG.INTERVAL_MULTIPLIER;
+        currentInterval = Math.min(nextInterval, CONFIG.MAX_INTERVAL);
+
+        // 添加随机波动
+        const randomOffset = Math.floor(Math.random() * CONFIG.RANDOM_OFFSET * 2) - CONFIG.RANDOM_OFFSET;
+        const actualInterval = currentInterval + randomOffset;
+
+        console.log(`\n📊 当前状态: 成功 ${tracker.succeeded.length} | 待处理 ${tracker.getPending().length} | 失败 ${tracker.failed.length}`);
+        console.log(`⏱️  等待 ${(actualInterval / 1000).toFixed(1)} 秒后开始下一轮...`);
+        await sleep(actualInterval);
       }
     }
 
-    // 如果还有待处理的，准备下一轮
-    if (tracker.hasPending()) {
-      // 递增间隔时间
-      currentInterval *= CONFIG.INTERVAL_MULTIPLIER;
+    // 打印最终报告
+    tracker.printReport();
 
-      console.log(`\n📊 当前状态: 成功 ${tracker.succeeded.length} | 待处理 ${tracker.getPending().length} | 失败 ${tracker.failed.length}`);
-      console.log(`⏱️  等待 ${currentInterval / 1000} 秒后开始下一轮...`);
-      await sleep(currentInterval);
+    // 汇总保存统计
+    const totalStats = tracker.succeeded.reduce((acc, up) => ({
+      new: (acc.new || 0) + (up.saveResult?.newCount || 0),
+      updated: (acc.updated || 0) + (up.saveResult?.updateCount || 0),
+      failed: (acc.failed || 0) + (up.saveResult?.failedCount || 0),
+    }), {});
+
+    console.log('\n' + '='.repeat(60));
+    console.log('💾 数据保存汇总');
+    console.log('='.repeat(60));
+    console.log(`新增文章: ${totalStats.new || 0} 篇`);
+    console.log(`更新文章: ${totalStats.updated || 0} 篇`);
+    console.log(`失败文章: ${totalStats.failed || 0} 篇`);
+    console.log('='.repeat(60));
+
+    console.log('\n✨ 脚本执行完成！\n');
+
+    // 返回退出码
+    process.exit(tracker.failed.length > 0 ? 1 : 0);
+  } catch (error) {
+    console.error('\n❌ 脚本执行出错:', error);
+    process.exit(1);
+  } finally {
+    if (client) {
+      await client.close();
     }
   }
-
-  // 打印最终报告
-  tracker.printReport();
-
-  // 如果全部成功，调用API保存数据
-  if (tracker.succeeded.length > 0) {
-    console.log('\n💾 准备保存数据到数据库...');
-    try {
-      const response = await httpRequest('http://localhost:3000/api/feeds/refresh', {
-        method: 'POST',
-      });
-
-      if (response.status === 200) {
-        const result = JSON.parse(response.body);
-        console.log('✅ 数据已保存到数据库');
-        console.log(`   新增: ${result.stats.new} 篇`);
-        console.log(`   更新: ${result.stats.updated} 篇`);
-      } else {
-        console.log('⚠️  保存失败:', `HTTP ${response.status}`);
-      }
-    } catch (error) {
-      console.log('⚠️  保存出错:', error.message);
-    }
-  }
-
-  console.log('\n✨ 脚本执行完成！\n');
-
-  // 返回退出码
-  process.exit(tracker.failed.length > 0 ? 1 : 0);
 }
 
 // ============================================================
@@ -329,4 +493,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { fetchUPMaster, UPMasterTracker };
+module.exports = { fetchAndSaveUPMaster, UPMasterTracker, parseRSSFeed };

@@ -23,7 +23,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-REM 检查 RSSHub 是否运行
+REM 检查 RSSHub
 echo 📡 检查 RSSHub 状态...
 curl -s -I http://localhost:1200 | findstr "200 OK" >nul 2>&1
 if %errorlevel% neq 0 (
@@ -36,19 +36,6 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 echo ✅ RSSHub 正常运行
-echo.
-
-REM 检查开发服务器
-echo 📡 检查开发服务器状态...
-curl -s http://localhost:3000/api/feeds/refresh | findstr "success\|error" >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ⚠️  警告: 开发服务器可能未运行
-    echo.
-    echo 请在另一个终端运行: npm run dev
-    echo.
-    set /p continue="是否继续执行? (y/n): "
-    if /i not "%continue%"=="y" exit /b 1
-)
 echo.
 
 REM 执行抓取脚本
