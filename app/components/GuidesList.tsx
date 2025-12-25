@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { FeedArticle } from '@/types/feed';
 
 // 定义平台和博主的数据结构
@@ -89,14 +89,64 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
   const [refreshing, setRefreshing] = useState(false);
   const [showAuthorDropdown, setShowAuthorDropdown] = useState(false);
 
+  // 无限滚动相关状态
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  // 动态作者列表
+  const [dynamicAuthors, setDynamicAuthors] = useState<Record<string, Author[]>>({});
+
   // 获取当前选中平台的作者列表
   const currentAuthors = selectedPlatform === 'all'
     ? []
-    : platforms.find(p => p.id === selectedPlatform)?.authors || [];
+    : (dynamicAuthors[selectedPlatform] || platforms.find(p => p.id === selectedPlatform)?.authors || []);
+
+  // 获取作者列表
+  const fetchAuthors = async () => {
+    try {
+      const response = await fetch('/api/authors');
+      const result = await response.json();
+
+      if (result.status === 'success' && result.data) {
+        const authorsData: Record<string, Author[]> = {};
+
+        // 转换数据格式
+        Object.entries(result.data).forEach(([platformName, authors]) => {
+          const authorList = (authors as Array<{ name: string; count: number }>).map((author, index) => ({
+            id: `author_${index}`,
+            name: author.name,
+            count: author.count
+          }));
+
+          // 映射平台名称到平台ID
+          if (platformName === 'B站') {
+            authorsData['bilibili'] = authorList;
+          } else if (platformName === 'TFTimes') {
+            authorsData['tftimes'] = authorList;
+          }
+        });
+
+        setDynamicAuthors(authorsData);
+      }
+    } catch (error) {
+      console.error('[GuidesList] 获取作者列表失败:', error);
+    }
+  };
 
   // 获取文章数据
-  const fetchArticles = async (forceRefresh = false, platform?: string, author?: string) => {
-    setLoading(true);
+  const fetchArticles = async (
+    pageNum: number,
+    isLoadMore = false,
+    platform?: string,
+    author?: string
+  ) => {
+    if (isLoadMore) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
     setError('');
 
     // 使用传入的参数，如果没有则使用当前状态
@@ -104,99 +154,103 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
     const filterAuthor = author !== undefined ? author : selectedAuthor;
 
     try {
-      let allArticles: FeedArticle[] = [];
-
-      // 直接调用 API 获取数据
-      try {
-        const response = await fetch('/api/feeds?limit=20');
-        const result = await response.json();
-
-        if (result.status === 'success' && result.data) {
-          allArticles.push(...result.data);
-        } else {
-          throw new Error('API 返回错误: ' + (result.message || '未知错误'));
-        }
-      } catch (error) {
-        console.error('[GuidesList] API 调用失败:', error);
-        throw new Error('无法获取数据: ' + error.message);
-      }
-
-      // 如果没有数据，显示错误
-      if (allArticles.length === 0) {
-        throw new Error('暂时没有可用的文章数据');
-      }
-
-      // 根据筛选条件过滤文章
-      let filteredArticles = [...allArticles];
-
+      // 构建 API URL
+      let apiUrl = `/api/feeds?page=${pageNum}&limit=20`;
       if (filterPlatform !== 'all') {
-        if (filterPlatform === 'tftimes') {
-          // 只显示 TFTimes 数据
-          filteredArticles = filteredArticles.filter(article =>
-            article.platform === 'TFTimes'
-          );
-
-          // 根据选择的作者（分类）进一步过滤
-          if (filterAuthor !== 'all') {
-            const categoryMap: Record<string, string> = {
-              'official': '新闻',
-              'strategy': '攻略',
-              'news': '新闻'
-            };
-            const targetCategory = categoryMap[filterAuthor];
-            if (targetCategory) {
-              filteredArticles = filteredArticles.filter(article =>
-                article.category === targetCategory
-              );
-            }
-          }
-        } else if (filterPlatform === 'bilibili') {
-          // 只显示 B 站数据
-          filteredArticles = filteredArticles.filter(article =>
-            article.platform === 'B站'
-          );
-
-          // 根据选择的博主进一步过滤
-          if (filterAuthor !== 'all') {
-            // 目前只有一个博主，后续可以根据需要扩展
-            const authorMap: Record<string, string> = {
-              'tft_master': '云顶大师兄',
-              'king': '王者导师',
-              'pro_guide': '职业攻略君'
-            };
-            // B站数据暂时不过滤，显示所有B站内容
-          }
-        } else {
-          // 其他平台暂时没有数据
-          filteredArticles = [];
+        apiUrl += `&platform=${filterPlatform === 'bilibili' ? 'B站' : 'TFTimes'}`;
+      }
+      if (filterAuthor !== 'all') {
+        // 根据作者ID查找实际的作者名称
+        const authorList = dynamicAuthors[filterPlatform] || [];
+        const selectedAuthorObj = authorList.find(a => a.id === filterAuthor);
+        if (selectedAuthorObj) {
+          apiUrl += `&author=${encodeURIComponent(selectedAuthorObj.name)}`;
         }
       }
 
-      // 按发布时间排序
-      filteredArticles.sort((a, b) =>
-        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-      );
+      const response = await fetch(apiUrl);
+      const result = await response.json();
 
-      const finalArticles = filteredArticles.slice(0, initialLimit);
-      setArticles(finalArticles);
-      setLastUpdated(new Date());
+      if (result.status === 'success' && result.data) {
+        const newArticles = result.data;
 
+        // 判断是否还有更多数据
+        const hasMoreData = newArticles.length === 20;
+        setHasMore(hasMoreData);
+
+        if (isLoadMore) {
+          // 追加数据
+          setArticles((prev) => [...prev, ...newArticles]);
+        } else {
+          // 替换数据
+          setArticles(newArticles);
+
+          // 更新时间：使用最新文章的 fetchedAt
+          if (newArticles.length > 0) {
+            const latestFetchedAt = new Date(
+              Math.max(...newArticles.map((a: FeedArticle) => new Date(a.fetchedAt).getTime()))
+            );
+            setLastUpdated(latestFetchedAt);
+          }
+        }
+      } else {
+        throw new Error('API 返回错误: ' + (result.message || '未知错误'));
+      }
     } catch (err: any) {
       const errorMessage = err.message || '获取文章失败，请稍后重试';
       setError(errorMessage);
       console.error('[GuidesList] 获取文章失败:', err);
-      setArticles([]); // 清空文章列表
+      if (!isLoadMore) {
+        setArticles([]);
+      }
     } finally {
-      setLoading(false);
+      if (isLoadMore) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
+
+  // 加载更多数据
+  const loadMore = useCallback(() => {
+    if (!loadingMore && hasMore && !loading) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      fetchArticles(nextPage, true);
+    }
+  }, [loadingMore, hasMore, loading, page]);
+
+  // 无限滚动监听
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const currentTarget = observerTarget.current;
+    if (currentTarget) {
+      observer.observe(currentTarget);
+    }
+
+    return () => {
+      if (currentTarget) {
+        observer.unobserve(currentTarget);
+      }
+    };
+  }, [loadMore]);
 
   // 页面加载时获取数据
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // 客户端环境，延迟一下确保组件完全挂载
       const timer = setTimeout(() => {
-        fetchArticles();
+        fetchAuthors(); // 先获取作者列表
+        fetchArticles(1);
       }, 100);
 
       return () => clearTimeout(timer);
@@ -209,8 +263,10 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
     setSelectedPlatform(platformId);
     setSelectedAuthor('all'); // 重置作者选择
     setShowAuthorDropdown(false);
+    setPage(1);
+    setHasMore(true);
     // 重新获取数据 - 传入新的平台和重置的作者参数
-    fetchArticles(false, platformId, 'all');
+    fetchArticles(1, false, platformId, 'all');
   };
 
   // 切换作者
@@ -218,14 +274,18 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
     console.log('[GuidesList] Author changed to:', authorId);
     setSelectedAuthor(authorId);
     setShowAuthorDropdown(false);
+    setPage(1);
+    setHasMore(true);
     // 重新获取数据 - 传入当前平台和新的作者参数
-    fetchArticles(false, selectedPlatform, authorId);
+    fetchArticles(1, false, selectedPlatform, authorId);
   };
 
   // 手动刷新数据 - 强制刷新模式
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchArticles(true); // 传入 true 强制刷新
+    setPage(1);
+    setHasMore(true);
+    await fetchArticles(1, false); // 重新从第一页加载
     setRefreshing(false);
   };
 
@@ -400,54 +460,78 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
 
       {/* 文章网格 */}
       {!loading && !error && articles.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {articles.map((article) => (
-            <a
-              key={article.id}
-              href={article.link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden hover:-translate-y-1"
-            >
-              <div className="p-6">
-                {/* 文章头部 */}
-                <div className="flex items-start justify-between mb-3">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(article.category)}`}>
-                    {article.category}
-                  </span>
-                  <div className="text-gray-400 group-hover:text-gray-600 transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                    </svg>
+        <>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {articles.map((article) => (
+              <a
+                key={article.id}
+                href={article.link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden hover:-translate-y-1"
+              >
+                <div className="p-6">
+                  {/* 文章头部 */}
+                  <div className="flex items-start justify-between mb-3">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(article.category)}`}>
+                      {article.category}
+                    </span>
+                    <div className="text-gray-400 group-hover:text-gray-600 transition-colors">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* 文章标题 */}
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                    {article.title}
+                  </h3>
+
+                  {/* 文章描述 */}
+                  <p className="text-sm text-gray-600 line-clamp-3 mb-4">
+                    {article.description}
+                  </p>
+
+                  {/* 底部信息 */}
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">
+                        {article.platform}
+                      </span>
+                      <span className="text-gray-600">
+                        {article.author}
+                      </span>
+                    </div>
+                    <span>{formatTime(article.publishedAt)}</span>
                   </div>
                 </div>
+              </a>
+            ))}
+          </div>
 
-                {/* 文章标题 */}
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                  {article.title}
-                </h3>
-
-                {/* 文章描述 */}
-                <p className="text-sm text-gray-600 line-clamp-3 mb-4">
-                  {article.description}
-                </p>
-
-                {/* 底部信息 */}
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">
-                      {article.platform}
-                    </span>
-                    <span className="text-gray-600">
-                      {article.author}
-                    </span>
-                  </div>
-                  <span>{formatTime(article.publishedAt)}</span>
-                </div>
+          {/* 加载更多指示器 */}
+          {loadingMore && (
+            <div className="mt-8 flex justify-center">
+              <div className="inline-flex items-center px-4 py-2 text-sm text-gray-600">
+                <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-gray-300 border-t-blue-600 mr-2"></div>
+                加载更多内容...
               </div>
-            </a>
-          ))}
-        </div>
+            </div>
+          )}
+
+          {/* 无限滚动哨兵元素 */}
+          {hasMore && !loadingMore && (
+            <div ref={observerTarget} className="h-10 mt-8"></div>
+          )}
+
+          {/* 已加载全部提示 */}
+          {!hasMore && !loadingMore && (
+            <div className="mt-8 text-center text-sm text-gray-500">
+              已加载全部内容
+            </div>
+          )}
+        </>
       )}
 
       {/* 空状态 */}
@@ -462,13 +546,6 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
             <p className="text-lg font-medium mb-2">暂无相关内容</p>
             <p className="text-sm">请尝试选择其他平台或博主</p>
           </div>
-        </div>
-      )}
-
-      {/* 统计信息 */}
-      {!loading && !error && articles.length > 0 && (
-        <div className="mt-8 text-center text-sm text-gray-500">
-          显示 {articles.length} 篇最新攻略内容
         </div>
       )}
     </div>

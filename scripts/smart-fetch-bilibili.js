@@ -341,7 +341,7 @@ function parseRSSFeed(xmlText, authorName) {
             title,
             description,
             link,
-            platform: 'Bilibili',
+            platform: 'B站',
             author: authorName,
             category: '视频',
             publishedAt,
