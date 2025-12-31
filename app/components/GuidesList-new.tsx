@@ -42,9 +42,8 @@ const platforms: Platform[] = [
     icon: '📺',
     color: 'bg-pink-500',
     authors: [
-      { id: 'tft_master', name: '云顶大师兄', count: 267 },
-      { id: 'king', name: '王者导师', count: 198 },
-      { id: 'pro_guide', name: '职业攻略君', count: 176 }
+      // 作者数据将从 API 动态加载
+      { id: 'placeholder', name: '加载中...', count: 0 }
     ]
   },
   {
@@ -54,20 +53,17 @@ const platforms: Platform[] = [
     color: 'bg-red-600',
     authors: [
       // 作者数据将从 API 动态加载
-      { id: 'reroll', name: 'Reroll', count: 0 },
-      { id: 'learningtft', name: 'LearningTFT', count: 0 },
-      { id: 'yiisyordle', name: 'Yi Is Yordle TFT', count: 0 }
+      { id: 'placeholder', name: '加载中...', count: 0 }
     ]
   },
   {
     id: 'tacter',
     name: 'Tacter',
-    icon: '🎯',
+    icon: '⚔️',
     color: 'bg-indigo-600',
     authors: [
       // 作者数据将从 API 动态加载
-      { id: 'tftips', name: 'TFTips', count: 0 },
-      { id: 'extiria', name: 'ExTIRIA', count: 0 }
+      { id: 'placeholder', name: '加载中...', count: 0 }
     ]
   }
 ];
@@ -79,6 +75,7 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('all');
   const [selectedAuthor, setSelectedAuthor] = useState<string>('all');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [showAuthorDropdown, setShowAuthorDropdown] = useState(false);
 
   // 无限滚动相关状态
@@ -249,8 +246,15 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
 
   // 页面加载时获取数据
   useEffect(() => {
-    fetchAuthors(); // 先获取作者列表
-    fetchArticles(1);
+    if (typeof window !== 'undefined') {
+      // 客户端环境，延迟一下确保组件完全挂载
+      const timer = setTimeout(() => {
+        fetchAuthors(); // 先获取作者列表
+        fetchArticles(1);
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
   }, []); // 只在组件挂载时执行一次
 
   // 切换平台
@@ -274,6 +278,15 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
     setHasMore(true);
     // 重新获取数据 - 传入当前平台和新的作者参数
     fetchArticles(1, false, selectedPlatform, authorId);
+  };
+
+  // 手动刷新数据 - 强制刷新模式
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setPage(1);
+    setHasMore(true);
+    await fetchArticles(1, false); // 重新从第一页加载
+    setRefreshing(false);
   };
 
   // 格式化时间
@@ -397,14 +410,34 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
             )}
           </div>
 
-          {/* 右侧更新时间 */}
-          {lastUpdated && (
-            <div className="flex items-center gap-4">
+          {/* 右侧刷新按钮和更新时间 */}
+          <div className="flex items-center gap-4">
+            {lastUpdated && (
               <span className="text-sm text-gray-500">
                 更新于 {formatTime(lastUpdated)}
               </span>
-            </div>
-          )}
+            )}
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <svg
+                className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                />
+              </svg>
+              {refreshing ? '刷新中...' : '刷新'}
+            </button>
+          </div>
         </div>
       </div>
 

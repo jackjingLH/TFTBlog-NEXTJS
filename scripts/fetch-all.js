@@ -2,8 +2,8 @@
  * 统一数据抓取脚本
  *
  * 功能：
- * - 并行执行所有数据抓取任务
- * - 支持 B站 (Bilibili) 和 TFT Times
+ * - 串行执行所有数据抓取任务
+ * - 支持 B站 (Bilibili)、TFT Times、YouTube 和 Tacter
  * - 汇总统计信息
  *
  * 使用方法：
@@ -26,6 +26,16 @@ const SCRIPTS = [
     name: 'TFTimes',
     path: path.join(__dirname, 'fetch-tftimes.js'),
     description: 'TFT Times 官网文章抓取',
+  },
+  {
+    name: 'YouTube',
+    path: path.join(__dirname, 'fetch-youtube.js'),
+    description: 'YouTube 频道视频抓取',
+  },
+  {
+    name: 'Tacter',
+    path: path.join(__dirname, 'fetch-tacter.js'),
+    description: 'Tacter 博主攻略抓取',
   },
 ];
 
