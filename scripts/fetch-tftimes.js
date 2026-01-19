@@ -135,6 +135,36 @@ function parseArticles(html) {
         }
       }
 
+      // 提取缩略图 - 尝试多种模式
+      let thumbnail = '';
+
+      // 模式1: <img> 标签的 src
+      const imgSrcMatch = articleHTML.match(/<img[^>]*src=["']([^"']+)["']/);
+      if (imgSrcMatch) {
+        thumbnail = imgSrcMatch[1];
+      }
+
+      // 模式2: data-src (懒加载)
+      if (!thumbnail) {
+        const dataSrcMatch = articleHTML.match(/<img[^>]*data-src=["']([^"']+)["']/);
+        if (dataSrcMatch) {
+          thumbnail = dataSrcMatch[1];
+        }
+      }
+
+      // 模式3: style 背景图
+      if (!thumbnail) {
+        const bgMatch = articleHTML.match(/background-image:\s*url\(['"]?([^'"()]+)['"]?\)/);
+        if (bgMatch) {
+          thumbnail = bgMatch[1];
+        }
+      }
+
+      // 如果是相对路径，转换为绝对路径
+      if (thumbnail && !thumbnail.startsWith('http')) {
+        thumbnail = `${CONFIG.BASE_URL}${thumbnail.startsWith('/') ? '' : '/'}${thumbnail}`;
+      }
+
       // 尝试提取分类（多种可能的类名）
       let category = '综合';
 
@@ -158,6 +188,7 @@ function parseArticles(html) {
         title,
         description,
         link,
+        thumbnail,
         platform: 'TFTimes',
         author: 'TFTimes',
         category,

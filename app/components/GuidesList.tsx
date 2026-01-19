@@ -3,6 +3,25 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { FeedArticle } from '@/types/feed';
 
+// 图片代理函数 - 绕过防盗链
+function getProxiedImageUrl(imageUrl: string | undefined): string | undefined {
+  if (!imageUrl) return undefined;
+
+  // 检查是否需要代理（B站、YouTube等）
+  const needsProxy = imageUrl.includes('hdslb.com') ||
+                     imageUrl.includes('bilibili.com') ||
+                     imageUrl.includes('ytimg.com') ||
+                     imageUrl.includes('ggpht.com');
+
+  if (needsProxy) {
+    // 使用代理API
+    return `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+  }
+
+  // 不需要代理的直接返回原URL
+  return imageUrl;
+}
+
 // 定义平台和博主的数据结构
 interface Platform {
   id: string;
@@ -295,9 +314,22 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
       '英雄解析': 'bg-green-100 text-green-800',
       '装备合成': 'bg-purple-100 text-purple-800',
       '版本更新': 'bg-orange-100 text-orange-800',
-      '新手教程': 'bg-pink-100 text-pink-800'
+      '新手教程': 'bg-pink-100 text-pink-800',
+      '视频': 'bg-purple-100 text-purple-800',
+      '攻略': 'bg-blue-100 text-blue-800'
     };
     return colors[category] || 'bg-gray-100 text-gray-800';
+  };
+
+  // 获取平台默认背景色
+  const getPlatformBg = (platform: string) => {
+    const colors: Record<string, string> = {
+      'YouTube': 'bg-gradient-to-br from-red-500 to-red-600',
+      'B站': 'bg-gradient-to-br from-pink-500 to-pink-600',
+      'TFTimes': 'bg-gradient-to-br from-blue-500 to-blue-600',
+      'Tacter': 'bg-gradient-to-br from-indigo-500 to-indigo-600'
+    };
+    return colors[platform] || 'bg-gradient-to-br from-gray-500 to-gray-600';
   };
 
   return (
@@ -435,44 +467,84 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                 href={article.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden hover:-translate-y-1"
+                className="group relative bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden hover:-translate-y-1 min-h-[200px]"
+                style={{
+                  backgroundImage: article.thumbnail
+                    ? `url("${getProxiedImageUrl(article.thumbnail)}")`
+                    : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
               >
-                <div className="p-6">
-                  {/* 文章头部 */}
-                  <div className="flex items-start justify-between mb-3">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(article.category)}`}>
+                {/* 背景遮罩层 - 确保文字可读 */}
+                <div className={`absolute inset-0 ${
+                  article.thumbnail
+                    ? 'bg-gradient-to-t from-black/95 via-black/70 to-black/40'
+                    : getPlatformBg(article.platform)
+                }`}></div>
+
+                {/* 内容层 */}
+                <div className="relative h-full p-5 flex flex-col justify-end">
+                  {/* 顶部：分类标签 - 绝对定位 */}
+                  <div className="absolute top-4 left-5 right-5 flex items-start justify-between">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shadow-lg ${
+                      article.thumbnail
+                        ? 'bg-white/90 text-gray-900'
+                        : getCategoryColor(article.category)
+                    }`}>
                       {article.category}
                     </span>
-                    <div className="text-gray-400 group-hover:text-gray-600 transition-colors">
+                    <div className="text-white/80 group-hover:text-white transition-colors">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
                     </div>
                   </div>
 
-                  {/* 文章标题 */}
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors">
-                    {article.title}
-                  </h3>
+                  {/* 底部：标题和信息 - 靠底部对齐 */}
+                  <div className="pt-12">
+                    {/* 文章标题 */}
+                    <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:scale-105 transition-transform text-white">
+                      {article.title}
+                    </h3>
 
-                  {/* 文章描述 */}
-                  <p className="text-sm text-gray-600 line-clamp-3 mb-4">
-                    {article.description}
-                  </p>
+                    {/* 文章描述 */}
+                    <p className="text-sm mb-3 line-clamp-2 text-white/80">
+                      {article.description}
+                    </p>
 
-                  {/* 底部信息 */}
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">
-                        {article.platform}
-                      </span>
-                      <span className="text-gray-600">
-                        {article.author}
+                    {/* 底部信息 */}
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-md font-medium ${
+                          article.thumbnail
+                            ? 'bg-white/20 text-white backdrop-blur-sm'
+                            : 'bg-white/20 text-white'
+                        }`}>
+                          {article.platform}
+                        </span>
+                        <span className="truncate max-w-[120px] text-white/80">
+                          {article.author}
+                        </span>
+                      </div>
+                      <span className="text-white/80">
+                        {formatTime(article.publishedAt)}
                       </span>
                     </div>
-                    <span>{formatTime(article.publishedAt)}</span>
                   </div>
                 </div>
+
+                {/* 无图片时显示平台图标 */}
+                {!article.thumbnail && (
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/20 pointer-events-none -mt-8">
+                    <div className="text-7xl">
+                      {article.platform === 'YouTube' && '▶️'}
+                      {article.platform === 'B站' && '📺'}
+                      {article.platform === 'TFTimes' && '🏆'}
+                      {article.platform === 'Tacter' && '🎯'}
+                    </div>
+                  </div>
+                )}
               </a>
             ))}
           </div>

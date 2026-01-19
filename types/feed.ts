@@ -4,6 +4,7 @@ export interface FeedArticle {
   title: string;           // 文章标题
   description: string;     // 摘要/描述
   link: string;            // 跳转链接
+  thumbnail?: string;      // 缩略图/封面图 URL
   platform: string;        // 平台 (B站/TFTimes/YouTube等)
   author: string;          // 作者/UP主名称
   category?: string;       // 分类（可选）

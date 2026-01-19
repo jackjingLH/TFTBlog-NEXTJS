@@ -162,6 +162,16 @@ function parseGuides(html, author) {
                 }
               }
 
+              // 提取缩略图 - 使用作者头像作为临时方案
+              let thumbnail = '';
+              if (guide.authorProfilePicture) {
+                thumbnail = guide.authorProfilePicture;
+                // 如果是相对路径，转换为绝对路径
+                if (thumbnail && !thumbnail.startsWith('http')) {
+                  thumbnail = `https://www.tacter.com${thumbnail.startsWith('/') ? '' : '/'}${thumbnail}`;
+                }
+              }
+
               // 尝试提取发布时间
               let publishedAt = new Date();
               if (guide.createdAt) {
@@ -175,6 +185,7 @@ function parseGuides(html, author) {
                 title,
                 description,
                 link,
+                thumbnail, // 添加缩略图字段（作者头像）
                 platform: 'Tacter',
                 author: author.name,
                 category: '攻略',
@@ -206,6 +217,7 @@ function parseGuides(html, author) {
             title,
             description: author.description || '',
             link: `https://www.tacter.com/@${author.username}`,
+            thumbnail: '', // 降级方案无法获取图片
             platform: 'Tacter',
             author: author.name,
             category: '攻略',

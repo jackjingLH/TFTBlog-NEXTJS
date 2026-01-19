@@ -236,7 +236,7 @@ async function fetchAndSaveUPMaster(up, collection) {
       throw new Error('无效的响应格式');
     }
 
-    // 2. 解析RSS数据
+    // 2. 解析RSS数据（从 RSS 中直接提取图片）
     const articles = parseRSSFeed(response.body, up.name);
     if (articles.length === 0) {
       console.log(`   ⚠️  ${up.name}: 未找到文章`);
@@ -286,7 +286,39 @@ async function fetchAndSaveUPMaster(up, collection) {
 }
 
 // ============================================================
-// RSS 解析函数
+// B站视频信息 API 调用（获取封面）
+// ============================================================
+async function getBilibiliVideoCover(bvid) {
+  try {
+    const url = `https://api.bilibili.com/x/web-interface/view?bvid=${bvid}`;
+    const response = await httpRequest(url, {
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Referer': 'https://www.bilibili.com/',
+      },
+    });
+
+    if (response.status === 200) {
+      const data = JSON.parse(response.body);
+      if (data.code === 0 && data.data && data.data.pic) {
+        // 将 HTTP 协议转换为 HTTPS
+        let coverUrl = data.data.pic;
+        if (coverUrl.startsWith('http://')) {
+          coverUrl = coverUrl.replace('http://', 'https://');
+        }
+        return coverUrl;
+      }
+    }
+  } catch (error) {
+    // 静默失败，不影响主流程
+    console.log(`     [封面获取失败]: ${error.message}`);
+  }
+  return '';
+}
+
+// ============================================================
+// RSS 解析函数（从 RSS 中直接提取图片）
 // ============================================================
 function parseRSSFeed(xmlText, authorName) {
   const articles = [];
@@ -298,8 +330,22 @@ function parseRSSFeed(xmlText, authorName) {
 
     if (!items) return articles;
 
-    for (const item of items) {
+    console.log(`   [RSS Parser] 找到 ${items.length} 个 item，开始解析...`);
+
+    for (let i = 0; i < items.length && i < 5; i++) {
+      const item = items[i];
+
       try {
+        // 🔍 调试：打印第一个 item 的完整内容
+        if (i === 0) {
+          console.log('\n   📋 [DEBUG] 第一个 RSS item 完整内容:');
+          console.log('   ' + '='.repeat(70));
+          // 只打印前 2000 字符避免输出过长
+          const preview = item.length > 2000 ? item.substring(0, 2000) + '...[截断]' : item;
+          console.log(preview);
+          console.log('   ' + '='.repeat(70) + '\n');
+        }
+
         // 提取标题（支持 CDATA 和普通格式）
         let title = '';
         const titleCDATAMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/);
@@ -317,13 +363,16 @@ function parseRSSFeed(xmlText, authorName) {
 
         // 提取描述（支持 CDATA 和普通格式）
         let description = '';
+        let rawDescription = ''; // 保存原始 HTML，用于提取图片
         const descCDATAMatch = item.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/s);
         const descPlainMatch = item.match(/<description>(.*?)<\/description>/s);
 
         if (descCDATAMatch) {
-          description = descCDATAMatch[1].replace(/<[^>]*>/g, '').substring(0, 200);
+          rawDescription = descCDATAMatch[1];
+          description = rawDescription.replace(/<[^>]*>/g, '').substring(0, 200);
         } else if (descPlainMatch) {
-          description = descPlainMatch[1].replace(/<[^>]*>/g, '').substring(0, 200);
+          rawDescription = descPlainMatch[1];
+          description = rawDescription.replace(/<[^>]*>/g, '').substring(0, 200);
         }
 
         // 提取发布日期
@@ -335,12 +384,82 @@ function parseRSSFeed(xmlText, authorName) {
         const videoId = videoIdMatch ? videoIdMatch[1] : '';
         const id = `bilibili-${videoId}`;
 
+        // 🖼️ 尝试从 RSS 中提取图片（多种可能的字段）
+        let thumbnail = '';
+
+        // 方式1: <enclosure> 标签（常用于播客和视频RSS）
+        const enclosureMatch = item.match(/<enclosure[^>]*url=["']([^"']+)["'][^>]*>/);
+        if (enclosureMatch) {
+          thumbnail = enclosureMatch[1];
+          console.log(`   [图片] enclosure: ${thumbnail.substring(0, 60)}...`);
+        }
+
+        // 方式2: <media:thumbnail> 标签（Media RSS 规范）
+        if (!thumbnail) {
+          const mediaThumbnailMatch = item.match(/<media:thumbnail[^>]*url=["']([^"']+)["'][^>]*>/);
+          if (mediaThumbnailMatch) {
+            thumbnail = mediaThumbnailMatch[1];
+            console.log(`   [图片] media:thumbnail: ${thumbnail.substring(0, 60)}...`);
+          }
+        }
+
+        // 方式3: <media:content> 标签
+        if (!thumbnail) {
+          const mediaContentMatch = item.match(/<media:content[^>]*url=["']([^"']+)["'][^>]*type=["']image/);
+          if (mediaContentMatch) {
+            thumbnail = mediaContentMatch[1];
+            console.log(`   [图片] media:content: ${thumbnail.substring(0, 60)}...`);
+          }
+        }
+
+        // 方式4: <itunes:image> 标签
+        if (!thumbnail) {
+          const itunesImageMatch = item.match(/<itunes:image[^>]*href=["']([^"']+)["'][^>]*>/);
+          if (itunesImageMatch) {
+            thumbnail = itunesImageMatch[1];
+            console.log(`   [图片] itunes:image: ${thumbnail.substring(0, 60)}...`);
+          }
+        }
+
+        // 方式5: description 中的 <img> 标签或 style 属性（需要先解码 HTML 实体）
+        if (!thumbnail && rawDescription) {
+          // 解码 HTML 实体
+          const decodedDesc = rawDescription
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&amp;/g, '&');
+
+          // 5a. 提取第一个 img 标签的 src
+          const imgMatch = decodedDesc.match(/<img[^>]*src=["']([^"']+)["'][^>]*>/);
+          if (imgMatch) {
+            thumbnail = imgMatch[1];
+            console.log(`   [图片] description img src: ${thumbnail.substring(0, 60)}...`);
+          }
+
+          // 5b. 提取 style 属性中的 background-image: url(...)
+          if (!thumbnail) {
+            const styleMatch = decodedDesc.match(/style=["'][^"']*background-image:\s*url\(["']?([^"')]+)["']?\)/);
+            if (styleMatch) {
+              thumbnail = styleMatch[1];
+              console.log(`   [图片] description style background-image: ${thumbnail.substring(0, 60)}...`);
+            }
+          }
+        }
+
+        // 如果没有找到图片
+        if (!thumbnail) {
+          console.log(`   [图片] ⚠️  未找到图片字段`);
+        }
+
+        // 保存文章
         if (title && link && videoId) {
           articles.push({
             id,
             title,
             description,
             link,
+            thumbnail,  // 从 RSS 提取的图片
             platform: 'B站',
             author: authorName,
             category: '视频',
@@ -349,15 +468,16 @@ function parseRSSFeed(xmlText, authorName) {
           });
         }
       } catch (error) {
-        console.error('[RSS Parser] 解析文章项失败:', error.message);
+        console.error('   [RSS Parser] 解析文章项失败:', error.message);
       }
     }
+
+    console.log(`   [RSS Parser] 成功解析 ${articles.length} 篇文章\n`);
   } catch (error) {
     console.error('[RSS Parser] 解析RSS失败:', error.message);
   }
 
-  // 只返回最新的 5 条
-  return articles.slice(0, 5);
+  return articles;
 }
 
 // ============================================================

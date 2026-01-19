@@ -17,6 +17,7 @@ const geistMono = localFont({
 export const metadata: Metadata = {
   title: "TFT Blog - 技术文章聚合",
   description: "聚合各大技术博客的优质文章",
+  referrer: "no-referrer", // 禁止发送 Referer，解决B站图片防盗链问题
 };
 
 export default function RootLayout({
