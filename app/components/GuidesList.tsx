@@ -7,18 +7,20 @@ import { FeedArticle } from '@/types/feed';
 function getProxiedImageUrl(imageUrl: string | undefined): string | undefined {
   if (!imageUrl) return undefined;
 
-  // 检查是否需要代理（B站、YouTube等）
-  const needsProxy = imageUrl.includes('hdslb.com') ||
-                     imageUrl.includes('bilibili.com') ||
-                     imageUrl.includes('ytimg.com') ||
-                     imageUrl.includes('ggpht.com');
+  // YouTube 图片不使用代理（服务器在国内无法访问，让客户端浏览器直接加载）
+  const isYouTube = imageUrl.includes('ytimg.com') || imageUrl.includes('ggpht.com');
+  if (isYouTube) {
+    return imageUrl; // 直接返回原URL
+  }
 
-  if (needsProxy) {
+  // B站图片需要代理（防盗链）
+  const isBilibili = imageUrl.includes('hdslb.com') || imageUrl.includes('bilibili.com');
+  if (isBilibili) {
     // 使用代理API
     return `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
   }
 
-  // 不需要代理的直接返回原URL
+  // 其他图片直接返回原URL
   return imageUrl;
 }
 
@@ -490,7 +492,7 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shadow-lg ${
                       article.thumbnail
                         ? 'bg-white/90 text-gray-900'
-                        : getCategoryColor(article.category)
+                        : getCategoryColor(article.category || '')
                     }`}>
                       {article.category}
                     </span>

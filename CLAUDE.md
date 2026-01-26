@@ -153,7 +153,18 @@ MongoDB 数据库包含以下集合：
 
 **服务器无法访问 GitHub**，因此采用**本地构建 + SCP 上传**的部署方式。
 
-### 部署流程
+### 📋 部署分类
+
+项目部署分为两类：
+
+1. **代码部署**（不频繁）：更新功能、修复 Bug、UI 调整
+2. **攻略上传**（频繁）：每日更新攻略内容和图片
+
+**两者独立操作，互不影响。**
+
+---
+
+## 一、代码部署流程（功能更新）
 
 #### 1. 本地构建
 
@@ -167,15 +178,19 @@ npm run build
 #### 2. 上传构建产物
 
 ```bash
-# 使用 SCP 上传 .next 目录到服务器
+# 上传 .next 目录（构建产物）
 scp -r .next root@47.99.202.3:/var/www/TFTBlog-NEXTJS/
 ```
 
-#### 3. 重启 PM2 应用
+**说明**：
+- 代码部署通常**不需要**上传 `public/guides`（攻略独立管理）
+- 如果修改了网站基础资源（favicon、logo 等），才需要上传 `public`（不含 guides）
+
+#### 3. 重启 PM2 应用并清理缓存
 
 ```bash
-# SSH 连接服务器并重启应用
-ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save"
+# SSH 连接服务器，重启应用并清理 Nginx 缓存
+ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save && rm -rf /www/server/nginx/proxy_cache_dir/* && systemctl reload nginx"
 ```
 
 #### 4. 验证部署
@@ -188,21 +203,93 @@ curl -I http://47.99.202.3/about
 curl http://47.99.202.3/api/about
 ```
 
-### 完整部署脚本示例
+### 代码部署 - 完整流程
 
 ```bash
-# 本地构建
+# 1. 本地构建
 npm run build
 
-# 上传到服务器
+# 2. 上传构建产物
 scp -r .next root@47.99.202.3:/var/www/TFTBlog-NEXTJS/
 
-# 重启应用
-ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save"
+# 3. 重启应用并清理缓存
+ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save && rm -rf /www/server/nginx/proxy_cache_dir/* && systemctl reload nginx"
 
-# 验证部署
+# 4. 验证部署
 curl -I http://47.99.202.3/
 ```
+
+**一键部署命令**（推荐）：
+```bash
+npm run build && scp -r .next root@47.99.202.3:/var/www/TFTBlog-NEXTJS/ && ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save && rm -rf /www/server/nginx/proxy_cache_dir/* && systemctl reload nginx && echo '✅ 代码部署完成'"
+```
+
+---
+
+## 二、攻略管理流程（内容更新）
+
+### 📝 攻略文件结构
+
+```
+public/guides/
+├── belveth-aatrox/
+│   ├── image.png
+│   ├── image-1.png
+│   └── dataTFT (23).png
+├── ekko-chogath/
+│   └── ...
+└── kaisa-belveth/
+    └── ...
+```
+
+### 🚀 上传新攻略或更新现有攻略
+
+#### 方法 1：上传单个攻略（推荐）
+
+```bash
+# 上传指定攻略目录
+scp -r public/guides/belveth-aatrox root@47.99.202.3:/var/www/TFTBlog-NEXTJS/public/guides/
+
+# 重启应用（让 Next.js 识别新文件）
+ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs"
+```
+
+**一键命令**：
+```bash
+scp -r public/guides/belveth-aatrox root@47.99.202.3:/var/www/TFTBlog-NEXTJS/public/guides/ && ssh root@47.99.202.3 "pm2 restart tftblog-nextjs && echo '✅ 攻略已上传'"
+```
+
+#### 方法 2：上传所有攻略
+
+```bash
+# 上传整个 guides 目录
+scp -r public/guides root@47.99.202.3:/var/www/TFTBlog-NEXTJS/public/
+
+# 重启应用
+ssh root@47.99.202.3 "pm2 restart tftblog-nextjs"
+```
+
+**一键命令**：
+```bash
+scp -r public/guides root@47.99.202.3:/var/www/TFTBlog-NEXTJS/public/ && ssh root@47.99.202.3 "pm2 restart tftblog-nextjs && echo '✅ 所有攻略已上传'"
+```
+
+### 📌 注意事项
+
+1. **上传攻略后必须重启 Next.js**
+   - `pm2 restart tftblog-nextjs`
+   - 否则新图片会返回 404
+
+2. **不需要清理 Nginx 缓存**
+   - 攻略图片是首次访问，不存在缓存问题
+
+3. **不需要重新构建代码**
+   - 攻略是静态文件，无需 `npm run build`
+
+4. **文件名注意事项**
+   - 支持中文文件名
+   - 支持空格（会自动 URL 编码）
+   - 推荐使用英文和数字
 
 ### PM2 配置
 
