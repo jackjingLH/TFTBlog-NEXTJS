@@ -1,0 +1,29 @@
+{
+  "mdFile": "D:\\game\\code\\convertTFT\\TFT\\TFT.md",
+  "outputDir": "D:\\game\\code\\convertTFT\\TFT\\output",
+  "fullImage": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_full.png",
+  "splitImages": [
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part1_of_3.png",
+      "filename": "TFT_part1_of_3.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 676.2
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part2_of_3.png",
+      "filename": "TFT_part2_of_3.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 300.9
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part3_of_3.png",
+      "filename": "TFT_part3_of_3.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 128.7
+    }
+  ],
+  "timestamp": "2026-01-29T01:57:14.223Z"
+}
