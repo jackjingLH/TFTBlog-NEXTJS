@@ -18,11 +18,6 @@ const path = require('path');
 // ============================================================
 const SCRIPTS = [
   {
-    name: 'Bilibili',
-    path: path.join(__dirname, 'smart-fetch-bilibili.js'),
-    description: 'B站UP主视频抓取',
-  },
-  {
     name: 'TFTimes',
     path: path.join(__dirname, 'fetch-tftimes.js'),
     description: 'TFT Times 官网文章抓取',
@@ -36,6 +31,11 @@ const SCRIPTS = [
     name: 'Tacter',
     path: path.join(__dirname, 'fetch-tacter.js'),
     description: 'Tacter 博主攻略抓取',
+  },
+  {
+    name: 'Bilibili',
+    path: path.join(__dirname, 'smart-fetch-bilibili.js'),
+    description: 'B站UP主视频抓取',
   },
 ];
 
