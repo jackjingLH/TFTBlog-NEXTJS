@@ -5,7 +5,8 @@ export interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: 'admin';
+  role: 'admin' | 'user'; // 管理员或普通用户
+  provider?: 'credentials' | 'github'; // 登录方式
 }
 
 export interface AdminLoginRequest {

@@ -32,12 +32,18 @@ export default function GuidePage({ params }: { params: { slug: string } }) {
             <div className="lg:sticky top-8 rounded-lg p-4" style={{
               background: 'rgba(30, 35, 48, 0.6)',
               border: '1px solid rgba(78, 201, 176, 0.2)',
-              backdropFilter: 'blur(10px)'
+              backdropFilter: 'blur(10px)',
+              maxHeight: 'calc(100vh - 4rem)', // 固定高度
             }}>
               <h2 className="text-xl font-bold mb-4" style={{ color: '#4ec9b0' }}>
                 攻略目录
               </h2>
-              <nav className="space-y-1">
+              <nav
+                className="space-y-1 overflow-y-auto custom-scrollbar"
+                style={{
+                  maxHeight: 'calc(100vh - 10rem)', // 导航区域可滚动
+                }}
+              >
                 {allGuides.map((g) => (
                   <Link
                     key={g.slug}

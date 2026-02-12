@@ -1,0 +1,71 @@
+{
+  "mdFile": "D:\\game\\code\\convertTFT\\TFT\\TFT.md",
+  "outputDir": "D:\\game\\code\\convertTFT\\TFT\\output",
+  "fullImage": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_full.png",
+  "splitImages": [
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part1_of_9.png",
+      "filename": "TFT_part1_of_9.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 562
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part2_of_9.png",
+      "filename": "TFT_part2_of_9.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 178.7
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part3_of_9.png",
+      "filename": "TFT_part3_of_9.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 185.4
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part4_of_9.png",
+      "filename": "TFT_part4_of_9.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 198.5
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part5_of_9.png",
+      "filename": "TFT_part5_of_9.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 199.3
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part6_of_9.png",
+      "filename": "TFT_part6_of_9.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 152.8
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part7_of_9.png",
+      "filename": "TFT_part7_of_9.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 161.3
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part8_of_9.png",
+      "filename": "TFT_part8_of_9.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 163.4
+    },
+    {
+      "path": "D:\\game\\code\\convertTFT\\TFT\\output\\TFT_part9_of_9.png",
+      "filename": "TFT_part9_of_9.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 97
+    }
+  ],
+  "timestamp": "2026-02-04T01:02:36.064Z"
+}

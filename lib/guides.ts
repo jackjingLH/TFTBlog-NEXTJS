@@ -113,11 +113,18 @@ export function getAllGuides(): GuideMetadata[] {
     const fileContents = fs.readFileSync(fullPath, 'utf8');
     const metadata = parseGuideMetadata(fileContents, slug);
 
+    // 获取文件更新时间
+    const stats = fs.statSync(fullPath);
+
     return {
       slug,
-      ...metadata
-    } as GuideMetadata;
-  }).filter(Boolean) as GuideMetadata[];
+      ...metadata,
+      updatedAt: stats.mtime.getTime(), // 添加更新时间戳
+    } as GuideMetadata & { updatedAt: number };
+  }).filter(Boolean) as (GuideMetadata & { updatedAt: number })[];
+
+  // 按更新时间倒序排列
+  guides.sort((a, b) => b.updatedAt - a.updatedAt);
 
   return guides;
 }

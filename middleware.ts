@@ -9,23 +9,31 @@ import { NextResponse } from 'next/server';
 export default auth((req) => {
   const { pathname } = req.nextUrl;
   const isLoggedIn = !!req.auth;
+  const userRole = req.auth?.user?.role;
 
-  // 受保护的路由
-  const protectedPaths = ['/dashboard'];
-  const isProtectedPath = protectedPaths.some((path) =>
-    pathname.startsWith(path)
-  );
+  // 受保护的路由（需要管理员权限）
+  const adminPaths = ['/dashboard'];
+  const isAdminPath = adminPaths.some((path) => pathname.startsWith(path));
 
-  // 访问受保护路由但未登录 -> 重定向到登录页
-  if (isProtectedPath && !isLoggedIn) {
+  // 访问管理员路由但未登录 -> 重定向到登录页
+  if (isAdminPath && !isLoggedIn) {
     const loginUrl = new URL('/login', req.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  // 已登录访问登录页 -> 重定向到控制台
+  // 访问管理员路由但不是管理员 -> 重定向到欢迎页
+  if (isAdminPath && isLoggedIn && userRole !== 'admin') {
+    return NextResponse.redirect(new URL('/welcome', req.url));
+  }
+
+  // 已登录访问登录页 -> 根据角色重定向
   if (pathname === '/login' && isLoggedIn) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+    if (userRole === 'admin') {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    } else {
+      return NextResponse.redirect(new URL('/welcome', req.url));
+    }
   }
 
   return NextResponse.next();
@@ -35,6 +43,7 @@ export const config = {
   matcher: [
     '/dashboard/:path*',
     '/login',
+    '/welcome',
     '/api/dashboard/:path*',
   ],
 };

@@ -32,36 +32,8 @@ const CONFIG = {
   // RSSHub 实例地址
   RSSHUB_URL: 'http://localhost:1200',
 
-  // YouTube 频道列表（使用正确的频道 Handle）
-  YOUTUBE_CHANNELS: [
-    // 测试模式：抓取 3 个 TFT 频道
-    {
-      type: 'user',
-      id: '@RerollTFT',
-      name: 'Reroll',
-      fans: '120万+',
-      description: 'TFT 攻略、版本更新、新英雄评测'
-    },
-    {
-      type: 'user',
-      id: '@LearningTFT',
-      name: 'LearningTFT',
-      fans: '80万+',
-      description: 'TFT 教程、新手指南'
-    },
-    {
-      type: 'user',
-      id: '@YiIsYordleTFT',
-      name: 'Yi Is Yordle TFT',
-      fans: '50万+',
-      description: 'TFT 战术分析、阵容搭配'
-    },
-
-    // 其他频道（测试完成后可启用）
-    // { type: 'user', id: '@TFTStrategic', name: 'TFT Strategic', fans: '50万+', description: '高级战术分析' },
-    // { type: 'user', id: '@K3Soju', name: 'K3 Soju', fans: '40万+', description: '职业选手' },
-    // { type: 'user', id: '@Double61', name: 'Double61', fans: '30万+', description: '锦标赛选手' },
-  ],
+  // YouTube 频道列表（从数据库读取）
+  YOUTUBE_CHANNELS: [],  // 不再使用硬编码，从数据库 sources 集合读取
 
   // 重试配置
   INITIAL_INTERVAL: 15000,    // 初始间隔：15秒
@@ -71,6 +43,65 @@ const CONFIG = {
   RANDOM_OFFSET: 2000,         // 随机波动：±2秒
   API_TIMEOUT: 30000,          // API超时：30秒
 };
+
+// ============================================================
+// 从数据库加载 YouTube 频道配置
+// ============================================================
+async function loadYouTubeChannels() {
+  let client;
+
+  try {
+    console.log('📋 从数据库加载 YouTube 频道配置...');
+
+    client = await MongoClient.connect(CONFIG.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
+
+    const db = client.db();
+    const collection = db.collection('sources');
+
+    const sources = await collection.find({
+      platform: 'YouTube',
+      enabled: true
+    }).toArray();
+
+    await client.close();
+
+    if (sources.length === 0) {
+      console.log('⚠️  数据库中没有启用的 YouTube 频道');
+      console.log('   请在管理后台添加 YouTube 频道配置');
+      return [];
+    }
+
+    console.log(`✅ 成功加载 ${sources.length} 个 YouTube 频道配置`);
+
+    // 转换为脚本需要的格式
+    return sources.map(source => ({
+      type: source.youtube.type,
+      id: source.youtube.id,
+      name: source.name,
+      fans: source.youtube.fans || '未知',
+      description: source.youtube.description || ''
+    }));
+  } catch (error) {
+    console.error('');
+    console.error('❌ 从数据库加载频道配置失败:');
+    console.error('='.repeat(60));
+    console.error(`错误信息: ${error.message}`);
+    console.error('='.repeat(60));
+    console.error('');
+    console.error('请确保：');
+    console.error('1. MongoDB 数据库正常运行');
+    console.error('2. 已运行数据迁移脚本: node scripts/migrate-sources.js');
+    console.error('3. MONGODB_URI 环境变量配置正确');
+    console.error('');
+    throw error;  // 抛出错误，不降级
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+}
 
 // ============================================================
 // 频道状态管理
@@ -326,11 +357,8 @@ function parseYouTubeRSS(xmlText, channelName) {
     }
 
     if (!items || items.length === 0) {
-      console.log('   [调试] 未找到 <item> 或 <entry> 标签');
       return videos;
     }
-
-    console.log(`   [调试] 检测到 ${isRSS ? 'RSS 2.0' : 'Atom'} 格式，找到 ${items.length} 个视频项`);
 
     for (const item of items) {
       try {
@@ -596,26 +624,28 @@ async function main() {
   let client;
 
   try {
-    console.log('🚀 YouTube 数据智能抓取脚本');
-    console.log('='.repeat(60));
-    console.log(`RSSHub: ${CONFIG.RSSHUB_URL}`);
-    console.log(`初始间隔: ${CONFIG.INITIAL_INTERVAL / 1000}秒`);
-    console.log(`最大重试: ${CONFIG.MAX_RETRIES}次`);
-    console.log(`频道数量: ${CONFIG.YOUTUBE_CHANNELS.length}`);
-    console.log('='.repeat(60));
+    console.log('🚀 YouTube 数据抓取');
     console.log('');
 
-    // 连接数据库
-    console.log('💾 连接数据库...');
+    // 从数据库加载频道配置
+    const channels = await loadYouTubeChannels();
+
+    if (channels.length === 0) {
+      console.log('⏹️  没有需要抓取的频道，退出');
+      process.exit(0);
+    }
+
+    console.log('');
+
+    // 连接数据库（用于保存文章）
     client = await MongoClient.connect(CONFIG.MONGODB_URI, {
       serverSelectionTimeoutMS: 5000,
     });
     const db = client.db();
     const collection = db.collection('articles');
-    console.log('✅ 数据库已连接\n');
 
-    // 初始化追踪器
-    const tracker = new ChannelTracker(CONFIG.YOUTUBE_CHANNELS);
+    // 初始化追踪器（使用数据库配置）
+    const tracker = new ChannelTracker(channels);
 
     let round = 0;
     let currentInterval = CONFIG.INITIAL_INTERVAL;
@@ -624,9 +654,7 @@ async function main() {
       round++;
       const pending = tracker.getPending();
 
-      console.log(`\n🔄 第 ${round} 轮尝试 (间隔: ${currentInterval / 1000}秒)`);
-      console.log(`待处理: ${pending.map(ch => ch.name).join(', ')}`);
-      console.log('-'.repeat(60));
+      console.log(`\n🔄 第 ${round} 轮 - 待处理: ${pending.length} 个频道`);
 
       for (const channel of pending) {
         console.log(`\n[${channel.name}] 开始抓取并保存...`);

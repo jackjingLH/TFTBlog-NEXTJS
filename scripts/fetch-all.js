@@ -4,10 +4,13 @@
  * 功能：
  * - 串行执行所有数据抓取任务
  * - 支持 B站 (Bilibili)、TFT Times、YouTube 和 Tacter
+ * - 支持指定平台抓取
  * - 汇总统计信息
  *
  * 使用方法：
- *   node scripts/fetch-all.js
+ *   node scripts/fetch-all.js                    # 抓取所有平台
+ *   node scripts/fetch-all.js TFTimes            # 仅抓取 TFTimes
+ *   node scripts/fetch-all.js TFTimes,YouTube    # 抓取 TFTimes 和 YouTube
  */
 
 const { spawn } = require('child_process');
@@ -16,7 +19,7 @@ const path = require('path');
 // ============================================================
 // 配置
 // ============================================================
-const SCRIPTS = [
+const ALL_SCRIPTS = [
   {
     name: 'TFTimes',
     path: path.join(__dirname, 'fetch-tftimes.js'),
@@ -38,6 +41,32 @@ const SCRIPTS = [
     description: 'B站UP主视频抓取',
   },
 ];
+
+// 解析命令行参数，过滤脚本
+function getScriptsToRun() {
+  const args = process.argv.slice(2);
+
+  // 如果没有参数，运行所有脚本
+  if (args.length === 0) {
+    return ALL_SCRIPTS;
+  }
+
+  // 解析平台参数（支持逗号分隔）
+  const platforms = args[0].split(',').map(p => p.trim());
+
+  // 过滤脚本
+  const scripts = ALL_SCRIPTS.filter(script =>
+    platforms.includes(script.name)
+  );
+
+  if (scripts.length === 0) {
+    console.error(`❌ 无效的平台参数: ${args[0]}`);
+    console.error(`可用平台: ${ALL_SCRIPTS.map(s => s.name).join(', ')}`);
+    process.exit(1);
+  }
+
+  return scripts;
+}
 
 // ============================================================
 // 执行脚本函数
@@ -76,12 +105,15 @@ function runScript(script) {
 // 主函数
 // ============================================================
 async function main() {
+  const SCRIPTS = getScriptsToRun();
+
   console.log('╔══════════════════════════════════════════════════════════╗');
   console.log('║          TFT Blog - 统一数据抓取脚本                       ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
   console.log(`⏰ 开始时间: ${new Date().toLocaleString('zh-CN')}`);
   console.log(`📋 任务数量: ${SCRIPTS.length}`);
+  console.log(`🎯 平台列表: ${SCRIPTS.map(s => s.name).join(', ')}`);
   console.log('');
 
   const startTime = Date.now();

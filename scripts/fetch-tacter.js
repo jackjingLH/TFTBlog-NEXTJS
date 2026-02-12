@@ -24,11 +24,8 @@ const CONFIG = {
   // MongoDB 配置
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://47.99.202.3:27017/tftblog',
 
-  // Tacter 博主列表
-  AUTHORS: [
-    { username: 'tftips', name: 'TFTips', description: 'I create guides' },
-    { username: 'extiria', name: 'ExTIRIA', description: 'I play TFT' },
-  ],
+  // Tacter 博主列表（从数据库读取）
+  AUTHORS: [],  // 不再使用硬编码，从数据库 sources 集合读取
 
   // 抓取限制
   GUIDE_LIMIT_PER_AUTHOR: 5,  // 每个博主最多抓取 5 篇攻略
@@ -37,6 +34,63 @@ const CONFIG = {
   REQUEST_TIMEOUT: 30000,
   RETRY_DELAY: 2000,
 };
+
+// ============================================================
+// 从数据库加载 Tacter 作者配置
+// ============================================================
+async function loadTacterAuthors() {
+  let client;
+
+  try {
+    console.log('📋 从数据库加载 Tacter 作者配置...');
+
+    client = await MongoClient.connect(CONFIG.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
+
+    const db = client.db();
+    const collection = db.collection('sources');
+
+    const sources = await collection.find({
+      platform: 'Tacter',
+      enabled: true
+    }).toArray();
+
+    await client.close();
+
+    if (sources.length === 0) {
+      console.log('⚠️  数据库中没有启用的 Tacter 作者');
+      console.log('   请在管理后台添加 Tacter 作者配置');
+      return [];
+    }
+
+    console.log(`✅ 成功加载 ${sources.length} 个 Tacter 作者配置`);
+
+    // 转换为脚本需要的格式
+    return sources.map(source => ({
+      username: source.tacter.username,
+      name: source.name,
+      description: source.tacter.description || ''
+    }));
+  } catch (error) {
+    console.error('');
+    console.error('❌ 从数据库加载 Tacter 作者配置失败:');
+    console.error('='.repeat(60));
+    console.error(`错误信息: ${error.message}`);
+    console.error('='.repeat(60));
+    console.error('');
+    console.error('请确保：');
+    console.error('1. MongoDB 数据库正常运行');
+    console.error('2. 已运行数据迁移脚本: node scripts/migrate-sources.js');
+    console.error('3. MONGODB_URI 环境变量配置正确');
+    console.error('');
+    throw error;  // 抛出错误，不降级
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+}
 
 // ============================================================
 // HTTP 请求辅助函数
@@ -113,7 +167,6 @@ function parseGuides(html, author) {
     const scriptMatch = html.match(/<script[^>]*id="__NEXT_DATA__"[^>]*>([\s\S]*?)<\/script>/);
 
     if (!scriptMatch) {
-      console.log('   [Parser] 未找到 __NEXT_DATA__');
       return guides;
     }
 
@@ -122,14 +175,10 @@ function parseGuides(html, author) {
       const dehydratedState = JSON.parse(nextData.props.pageProps.dehydratedState);
       const queries = dehydratedState.queries || [];
 
-      console.log(`   [Parser] 找到 ${queries.length} 个查询`);
-
       // 查找包含 pages 的查询 (攻略列表)
       for (const query of queries) {
         if (query.state && query.state.data && query.state.data.pages) {
           const pages = query.state.data.pages;
-
-          console.log(`   [Parser] 找到 ${pages.length} 页攻略`);
 
           // 遍历所有页面
           for (const page of pages) {
@@ -197,18 +246,12 @@ function parseGuides(html, author) {
         }
       }
 
-      console.log(`   [Parser] 成功解析 ${guides.length} 篇攻略`);
     } catch (jsonError) {
-      console.error('   [Parser] JSON 解析失败:', jsonError.message);
-
       // 降级方案: 尝试简单的标题匹配
-      console.log('   [Parser] 尝试降级方案...');
       const titlePattern = /"title":"([^"]+)"/g;
       const titleMatches = html.match(titlePattern);
 
       if (titleMatches) {
-        console.log(`   [Parser] 降级方案找到 ${titleMatches.length} 个标题`);
-
         for (let i = 0; i < Math.min(titleMatches.length, CONFIG.GUIDE_LIMIT_PER_AUTHOR); i++) {
           const title = titleMatches[i].match(/"title":"([^"]+)"/)[1];
 
@@ -252,15 +295,12 @@ async function saveToDatabase(guides) {
   let client;
 
   try {
-    console.log('\n[Tacter] 连接数据库...');
     client = await MongoClient.connect(CONFIG.MONGODB_URI, {
       serverSelectionTimeoutMS: 5000,
     });
 
     const db = client.db();
     const collection = db.collection('articles');
-
-    console.log('[Tacter] 开始保存攻略到数据库...');
 
     const stats = {
       new: 0,
@@ -290,7 +330,6 @@ async function saveToDatabase(guides) {
       }
     }
 
-    console.log('[Tacter] 保存完成！统计信息:', stats);
     return stats;
   } finally {
     if (client) {
@@ -303,61 +342,52 @@ async function saveToDatabase(guides) {
 // 主函数
 // ============================================================
 async function main() {
-  console.log('🚀 Tacter 数据抓取脚本 v2');
-  console.log('='.repeat(60));
-  console.log(`博主数量: ${CONFIG.AUTHORS.length}`);
-  console.log(`每个博主最多抓取: ${CONFIG.GUIDE_LIMIT_PER_AUTHOR} 篇攻略`);
-  console.log('='.repeat(60));
+  console.log('🚀 Tacter 数据抓取');
+  console.log('');
+
+  // 从数据库加载作者配置
+  const authors = await loadTacterAuthors();
+
+  if (authors.length === 0) {
+    console.log('⏹️  没有需要抓取的作者，退出');
+    process.exit(0);
+  }
+
   console.log('');
 
   const allGuides = [];
 
-  for (const author of CONFIG.AUTHORS) {
-    console.log(`\n📝 抓取博主: ${author.name} (@${author.username})`);
-    console.log('-'.repeat(60));
+  for (const author of authors) {
+    console.log(`\n📝 ${author.name} (@${author.username})`);
 
     try {
       const url = `https://www.tacter.com/@${author.username}`;
-      console.log(`URL: ${url}`);
 
       // 抓取页面 HTML
       const html = await fetchWithRetry(url);
-
-      console.log(`✅ 成功获取 HTML (${html.length} 字符)`);
 
       // 解析攻略列表
       const guides = parseGuides(html, author);
 
       if (guides.length > 0) {
-        console.log(`\n📋 成功解析 ${guides.length} 篇攻略:`);
-        guides.forEach((guide, index) => {
-          console.log(`\n${index + 1}. ${guide.title}`);
-          console.log(`   ID: ${guide.id}`);
-          console.log(`   链接: ${guide.link}`);
-          console.log(`   发布时间: ${guide.publishedAt.toLocaleString('zh-CN')}`);
-          console.log(`   描述: ${guide.description.substring(0, 80)}...`);
-        });
-
+        console.log(`   ✅ 成功: ${guides.length} 篇攻略`);
         allGuides.push(...guides);
       } else {
-        console.log('⚠️  未找到攻略');
+        console.log('   ⚠️  未找到攻略');
       }
     } catch (error) {
-      console.error(`❌ 抓取失败 [${author.name}]:`, error.message);
+      console.error(`   ❌ 失败: ${error.message}`);
     }
 
     // 博主之间延迟
-    if (CONFIG.AUTHORS.indexOf(author) < CONFIG.AUTHORS.length - 1) {
-      console.log('\n⏱️  等待 2 秒后继续...');
+    if (authors.indexOf(author) < authors.length - 1) {
       await new Promise(resolve => setTimeout(resolve, 2000));
     }
   }
 
   // 保存到数据库
   if (allGuides.length > 0) {
-    console.log('\n' + '='.repeat(60));
-    console.log(`📊 总计抓取: ${allGuides.length} 篇攻略`);
-    console.log('='.repeat(60));
+    console.log(`\n📊 总计: ${allGuides.length} 篇攻略`);
 
     const stats = await saveToDatabase(allGuides);
 

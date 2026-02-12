@@ -7,9 +7,10 @@ import bcrypt from 'bcryptjs';
  */
 export interface IAdmin {
   email: string;
-  password: string;
+  password?: string; // OAuth 用户无需密码
   name: string;
-  role: 'admin';
+  role: 'admin' | 'user'; // 管理员或普通用户
+  provider: 'credentials' | 'github'; // 登录方式
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,7 +27,7 @@ const AdminSchema = new mongoose.Schema<IAdmin>(
     },
     password: {
       type: String,
-      required: true,
+      required: false, // OAuth 用户无需密码
       minlength: 6,
     },
     name: {
@@ -36,8 +37,14 @@ const AdminSchema = new mongoose.Schema<IAdmin>(
     },
     role: {
       type: String,
-      default: 'admin',
-      enum: ['admin'],
+      default: 'user', // 默认为普通用户
+      enum: ['admin', 'user'],
+    },
+    provider: {
+      type: String,
+      required: true,
+      default: 'credentials',
+      enum: ['credentials', 'github'],
     },
   },
   {
@@ -47,8 +54,10 @@ const AdminSchema = new mongoose.Schema<IAdmin>(
 
 // 保存前自动哈希密码
 AdminSchema.pre('save', async function (next) {
+  // OAuth 用户跳过密码加密
+  if (this.provider !== 'credentials') return next();
   if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12);
+  this.password = await bcrypt.hash(this.password!, 12);
   next();
 });
 

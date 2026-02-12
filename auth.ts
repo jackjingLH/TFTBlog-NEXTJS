@@ -1,5 +1,6 @@
 import NextAuth, { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GitHubProvider from 'next-auth/providers/github';
 import dbConnect from '@/lib/mongodb';
 import Admin from '@/models/Admin';
 import { AdminUser } from '@/types/admin';
@@ -11,6 +12,7 @@ import { AdminUser } from '@/types/admin';
  */
 export const authConfig: NextAuthConfig = {
   providers: [
+    // 邮箱密码登录
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
@@ -55,6 +57,11 @@ export const authConfig: NextAuthConfig = {
         };
       },
     }),
+    // GitHub 登录
+    GitHubProvider({
+      clientId: process.env.GITHUB_CLIENT_ID!,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+    }),
   ],
   session: {
     strategy: 'jwt',
@@ -65,13 +72,45 @@ export const authConfig: NextAuthConfig = {
     error: '/login',
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      // GitHub 登录时的处理
+      if (account?.provider === 'github') {
+        await dbConnect();
+
+        // 检查用户是否已存在
+        let admin = await Admin.findOne({ email: user.email });
+
+        if (!admin) {
+          // 首次 GitHub 登录，创建普通用户账号
+          admin = await Admin.create({
+            email: user.email,
+            name: user.name || 'GitHub User',
+            provider: 'github',
+            role: 'user', // 默认创建普通用户
+          });
+        }
+      }
+      return true;
+    },
+    async jwt({ token, user, account }) {
       // 首次登录时，将用户信息添加到 token
       if (user) {
-        token.id = user.id;
-        token.email = user.email;
-        token.name = user.name;
-        token.role = (user as any).role;
+        // 如果是 OAuth 登录，从数据库读取完整的用户信息（包含最新的 role）
+        if (account?.provider === 'github') {
+          await dbConnect();
+          const dbUser = await Admin.findOne({ email: user.email });
+
+          token.id = dbUser?._id.toString() || user.id;
+          token.email = dbUser?.email || user.email;
+          token.name = dbUser?.name || user.name;
+          token.role = dbUser?.role || 'user'; // 从数据库读取 role
+        } else {
+          // credentials 登录
+          token.id = user.id;
+          token.email = user.email;
+          token.name = user.name;
+          token.role = (user as any).role;
+        }
       }
       return token;
     },

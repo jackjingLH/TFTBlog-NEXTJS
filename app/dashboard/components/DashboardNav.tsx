@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', label: '数据统计', icon: '📊' },
-  { href: '/dashboard/rss', label: 'RSS 管理', icon: '📡' },
+  { href: '/dashboard/fetch', label: '数据抓取', icon: '🔄' },
+  { href: '/dashboard/aggregation', label: '聚合管理', icon: '🌐' },
   { href: '/dashboard/guides', label: '攻略管理', icon: '📝' },
   { href: '/', label: '返回首页', icon: '🏠' },
 ];

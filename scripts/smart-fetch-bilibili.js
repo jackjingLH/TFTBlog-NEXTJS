@@ -33,15 +33,8 @@ const CONFIG = {
   // B站Cookie（用于RSSHub获取数据）
   BILIBILI_COOKIE: process.env.BILIBILI_COOKIE || '',
 
-  // UP主列表（按粉丝数排序，大V在前可能有优势）
-  UP_MASTERS: [
-    { uid: '18343134', name: '林小北Lindo', fans: '186万' },
-    { uid: '388063772', name: 'GoDlike_神超', fans: '84.46万' },
-    { uid: '262943792', name: '手刃猫咪', fans: '15.69万' },
-    { uid: '14306063', name: '兔子解说JokerTu', fans: '待更新' },
-    { uid: '37452208', name: '襄平霸王东', fans: '待更新' },
-    { uid: '3546666107931417', name: '云顶风向标', fans: '待更新' },
-  ],
+  // UP主列表（从数据库读取）
+  UP_MASTERS: [],  // 不再使用硬编码，从数据库 sources 集合读取
 
   // 重试配置
   INITIAL_INTERVAL: 15000,    // 初始间隔：15秒
@@ -51,6 +44,63 @@ const CONFIG = {
   RANDOM_OFFSET: 2000,         // 随机波动：±2秒
   API_TIMEOUT: 30000,          // API超时：30秒
 };
+
+// ============================================================
+// 从数据库加载 B站 UP主配置
+// ============================================================
+async function loadBilibiliUPMasters() {
+  let client;
+
+  try {
+    console.log('📋 从数据库加载 B站 UP主配置...');
+
+    client = await MongoClient.connect(CONFIG.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+    });
+
+    const db = client.db();
+    const collection = db.collection('sources');
+
+    const sources = await collection.find({
+      platform: 'Bilibili',
+      enabled: true
+    }).toArray();
+
+    await client.close();
+
+    if (sources.length === 0) {
+      console.log('⚠️  数据库中没有启用的 B站 UP主');
+      console.log('   请在管理后台添加 B站 UP主配置');
+      return [];
+    }
+
+    console.log(`✅ 成功加载 ${sources.length} 个 B站 UP主配置`);
+
+    // 转换为脚本需要的格式
+    return sources.map(source => ({
+      uid: source.bilibili.uid,
+      name: source.name,
+      fans: source.bilibili.fans || '待更新'
+    }));
+  } catch (error) {
+    console.error('');
+    console.error('❌ 从数据库加载 UP主配置失败:');
+    console.error('='.repeat(60));
+    console.error(`错误信息: ${error.message}`);
+    console.error('='.repeat(60));
+    console.error('');
+    console.error('请确保：');
+    console.error('1. MongoDB 数据库正常运行');
+    console.error('2. 已运行数据迁移脚本: node scripts/migrate-sources.js');
+    console.error('3. MONGODB_URI 环境变量配置正确');
+    console.error('');
+    throw error;  // 抛出错误，不降级
+  } finally {
+    if (client) {
+      await client.close();
+    }
+  }
+}
 
 // ============================================================
 // UP主状态管理
@@ -330,22 +380,10 @@ function parseRSSFeed(xmlText, authorName) {
 
     if (!items) return articles;
 
-    console.log(`   [RSS Parser] 找到 ${items.length} 个 item，开始解析...`);
-
     for (let i = 0; i < items.length && i < 5; i++) {
       const item = items[i];
 
       try {
-        // 🔍 调试：打印第一个 item 的完整内容
-        if (i === 0) {
-          console.log('\n   📋 [DEBUG] 第一个 RSS item 完整内容:');
-          console.log('   ' + '='.repeat(70));
-          // 只打印前 2000 字符避免输出过长
-          const preview = item.length > 2000 ? item.substring(0, 2000) + '...[截断]' : item;
-          console.log(preview);
-          console.log('   ' + '='.repeat(70) + '\n');
-        }
-
         // 提取标题（支持 CDATA 和普通格式）
         let title = '';
         const titleCDATAMatch = item.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/);
@@ -391,7 +429,6 @@ function parseRSSFeed(xmlText, authorName) {
         const enclosureMatch = item.match(/<enclosure[^>]*url=["']([^"']+)["'][^>]*>/);
         if (enclosureMatch) {
           thumbnail = enclosureMatch[1];
-          console.log(`   [图片] enclosure: ${thumbnail.substring(0, 60)}...`);
         }
 
         // 方式2: <media:thumbnail> 标签（Media RSS 规范）
@@ -399,7 +436,6 @@ function parseRSSFeed(xmlText, authorName) {
           const mediaThumbnailMatch = item.match(/<media:thumbnail[^>]*url=["']([^"']+)["'][^>]*>/);
           if (mediaThumbnailMatch) {
             thumbnail = mediaThumbnailMatch[1];
-            console.log(`   [图片] media:thumbnail: ${thumbnail.substring(0, 60)}...`);
           }
         }
 
@@ -408,7 +444,6 @@ function parseRSSFeed(xmlText, authorName) {
           const mediaContentMatch = item.match(/<media:content[^>]*url=["']([^"']+)["'][^>]*type=["']image/);
           if (mediaContentMatch) {
             thumbnail = mediaContentMatch[1];
-            console.log(`   [图片] media:content: ${thumbnail.substring(0, 60)}...`);
           }
         }
 
@@ -417,7 +452,6 @@ function parseRSSFeed(xmlText, authorName) {
           const itunesImageMatch = item.match(/<itunes:image[^>]*href=["']([^"']+)["'][^>]*>/);
           if (itunesImageMatch) {
             thumbnail = itunesImageMatch[1];
-            console.log(`   [图片] itunes:image: ${thumbnail.substring(0, 60)}...`);
           }
         }
 
@@ -434,7 +468,6 @@ function parseRSSFeed(xmlText, authorName) {
           const imgMatch = decodedDesc.match(/<img[^>]*src=["']([^"']+)["'][^>]*>/);
           if (imgMatch) {
             thumbnail = imgMatch[1];
-            console.log(`   [图片] description img src: ${thumbnail.substring(0, 60)}...`);
           }
 
           // 5b. 提取 style 属性中的 background-image: url(...)
@@ -442,14 +475,8 @@ function parseRSSFeed(xmlText, authorName) {
             const styleMatch = decodedDesc.match(/style=["'][^"']*background-image:\s*url\(["']?([^"')]+)["']?\)/);
             if (styleMatch) {
               thumbnail = styleMatch[1];
-              console.log(`   [图片] description style background-image: ${thumbnail.substring(0, 60)}...`);
             }
           }
-        }
-
-        // 如果没有找到图片
-        if (!thumbnail) {
-          console.log(`   [图片] ⚠️  未找到图片字段`);
         }
 
         // 保存文章
@@ -472,7 +499,6 @@ function parseRSSFeed(xmlText, authorName) {
       }
     }
 
-    console.log(`   [RSS Parser] 成功解析 ${articles.length} 篇文章\n`);
   } catch (error) {
     console.error('[RSS Parser] 解析RSS失败:', error.message);
   }
@@ -494,26 +520,28 @@ async function main() {
   let client;
 
   try {
-    console.log('🚀 B站数据智能抓取脚本（优化版：一次请求+立即保存）');
-    console.log('='.repeat(60));
-    console.log(`RSSHub: ${CONFIG.RSSHUB_URL}`);
-    console.log(`初始间隔: ${CONFIG.INITIAL_INTERVAL / 1000}秒`);
-    console.log(`最大重试: ${CONFIG.MAX_RETRIES}次`);
-    console.log(`UP主数量: ${CONFIG.UP_MASTERS.length}`);
-    console.log('='.repeat(60));
+    console.log('🚀 B站数据抓取');
     console.log('');
 
-    // 连接数据库
-    console.log('💾 连接数据库...');
+    // 从数据库加载 UP主配置
+    const upMasters = await loadBilibiliUPMasters();
+
+    if (upMasters.length === 0) {
+      console.log('⏹️  没有需要抓取的 UP主，退出');
+      process.exit(0);
+    }
+
+    console.log('');
+
+    // 连接数据库（用于保存文章）
     client = await MongoClient.connect(CONFIG.MONGODB_URI, {
       serverSelectionTimeoutMS: 5000,
     });
     const db = client.db();
     const collection = db.collection('articles');  // 使用articles集合
-    console.log('✅ 数据库已连接\n');
 
-    // 初始化追踪器
-    const tracker = new UPMasterTracker(CONFIG.UP_MASTERS);
+    // 初始化追踪器（使用数据库配置）
+    const tracker = new UPMasterTracker(upMasters);
 
     let round = 0;
     let currentInterval = CONFIG.INITIAL_INTERVAL;
@@ -522,26 +550,22 @@ async function main() {
       round++;
       const pending = tracker.getPending();
 
-      console.log(`\n🔄 第 ${round} 轮尝试 (间隔: ${currentInterval / 1000}秒)`);
-      console.log(`待处理: ${pending.map(up => up.name).join(', ')}`);
-      console.log('-'.repeat(60));
+      console.log(`\n🔄 第 ${round} 轮 - 待处理: ${pending.length} 个UP主`);
 
       for (const up of pending) {
-        console.log(`\n[${up.name}] 开始抓取并保存...`);
-
         try {
           // 一次请求完成：获取RSS + 解析 + 保存
           const result = await fetchAndSaveUPMaster(up, collection);
 
-          console.log(`✅ [${up.name}] 成功！`);
+          console.log(`   ✅ [${up.name}] 成功`);
           tracker.markSuccess(up.uid, result); // 保存结果统计
         } catch (error) {
           const errorMsg = error.message || '未知错误';
-          console.log(`❌ [${up.name}] 失败: ${errorMsg}`);
+          console.log(`   ❌ [${up.name}] ${errorMsg}`);
 
           const shouldRetry = tracker.markRetry(up.uid, errorMsg);
           if (!shouldRetry) {
-            console.log(`⚠️  [${up.name}] 已达最大重试次数，放弃`);
+            console.log(`   ⚠️  已达最大重试次数`);
           }
         }
 

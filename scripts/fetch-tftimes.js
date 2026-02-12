@@ -82,11 +82,8 @@ function parseArticles(html) {
   const matches = html.match(articlePattern);
 
   if (!matches) {
-    console.log('[TFTimes] 未找到文章元素');
     return articles;
   }
-
-  console.log(`[TFTimes] 找到 ${matches.length} 个文章元素`);
 
   for (let i = 0; i < matches.length && i < CONFIG.ARTICLE_LIMIT; i++) {
     const articleHTML = matches[i];
@@ -226,15 +223,12 @@ async function saveToDatabase(articles) {
   let client;
 
   try {
-    console.log('\n[TFTimes] 连接数据库...');
     client = await MongoClient.connect(CONFIG.MONGODB_URI, {
       serverSelectionTimeoutMS: 5000,
     });
 
     const db = client.db();
     const collection = db.collection('articles');
-
-    console.log('[TFTimes] 开始保存文章到数据库...');
 
     const stats = {
       new: 0,
@@ -264,7 +258,6 @@ async function saveToDatabase(articles) {
       }
     }
 
-    console.log('[TFTimes] 保存完成！统计信息:', stats);
     return stats;
   } finally {
     if (client) {
@@ -277,34 +270,13 @@ async function saveToDatabase(articles) {
 // 主函数
 // ============================================================
 async function main() {
-  console.log('🚀 TFT Times 数据抓取脚本');
-  console.log('='.repeat(60));
-  console.log(`网站: ${CONFIG.BASE_URL}`);
-  console.log(`抓取数量: 最新 ${CONFIG.ARTICLE_LIMIT} 篇`);
-  console.log('='.repeat(60));
-  console.log('');
+  console.log('🚀 TFT Times 数据抓取');
 
   try {
-    console.log('[TFTimes] 开始从主页抓取最新文章...');
-
-    // 从主页抓取
     const html = await fetchHTML(CONFIG.BASE_URL);
     const articles = parseArticles(html);
 
     console.log(`\n📊 成功抓取: ${articles.length} 篇文章`);
-
-    // 打印抓取的数据（用于验证）
-    console.log('\n📋 抓取到的文章详情:');
-    console.log('='.repeat(60));
-    articles.forEach((article, index) => {
-      console.log(`\n${index + 1}. ${article.title}`);
-      console.log(`   ID: ${article.id}`);
-      console.log(`   链接: ${article.link}`);
-      console.log(`   分类: ${article.category}`);
-      console.log(`   发布时间: ${article.publishedAt.toLocaleString('zh-CN')}`);
-      console.log(`   描述: ${article.description.substring(0, 100)}...`);
-    });
-    console.log('\n' + '='.repeat(60));
 
     // 保存到数据库
     if (articles.length > 0) {

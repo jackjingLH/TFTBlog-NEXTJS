@@ -25,3 +25,28 @@ body {
     text-wrap: balance;
   }
 }
+
+/* 自定义滚动条样式 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(30, 35, 48, 0.3);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #4ec9b0 0%, #3a9d88 100%);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5ed9c0 0%, #4aad98 100%);
+}
+
+/* Firefox 滚动条 */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #4ec9b0 rgba(30, 35, 48, 0.3);
+}
