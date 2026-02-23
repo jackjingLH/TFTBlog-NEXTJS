@@ -8,6 +8,7 @@ const PLATFORMS = [
   { name: 'YouTube', label: 'YouTube', icon: '📺', color: 'from-red-600 to-red-700' },
   { name: 'Tacter', label: 'Tacter', icon: '📖', color: 'from-purple-600 to-purple-700' },
   { name: 'Bilibili', label: 'B站', icon: '📹', color: 'from-pink-600 to-pink-700' },
+  { name: 'Douyin', label: '抖音', icon: '🎵', color: 'from-cyan-600 to-cyan-700' },
 ];
 
 export default function FetchDataPage() {
@@ -107,7 +108,7 @@ export default function FetchDataPage() {
               执行抓取任务
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              从 TFT Times、YouTube、Tacter 和 Bilibili 抓取最新的云顶之弈内容
+              从 TFT Times、YouTube、Tacter、Bilibili 和抖音抓取最新的云顶之弈内容
             </p>
           </div>
 
@@ -180,7 +181,7 @@ export default function FetchDataPage() {
             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
               抓取指定平台
             </h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               {PLATFORMS.map((platform) => (
                 <button
                   key={platform.name}

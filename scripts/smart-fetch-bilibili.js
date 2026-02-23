@@ -487,7 +487,7 @@ function parseRSSFeed(xmlText, authorName) {
             description,
             link,
             thumbnail,  // 从 RSS 提取的图片
-            platform: 'B站',
+            platform: 'Bilibili',  // 修复：统一使用 'Bilibili' 与 sources 集合保持一致
             author: authorName,
             category: '视频',
             publishedAt,

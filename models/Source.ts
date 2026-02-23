@@ -2,10 +2,10 @@ import mongoose from 'mongoose';
 
 /**
  * 数据源接口定义
- * 支持 YouTube、Bilibili、Tacter、TFTimes 四个平台
+ * 支持 YouTube、Bilibili、Douyin、Tacter、TFTimes 五个平台
  */
 export interface ISource {
-  platform: 'YouTube' | 'Bilibili' | 'Tacter' | 'TFTimes';
+  platform: 'YouTube' | 'Bilibili' | 'Douyin' | 'Tacter' | 'TFTimes';
   name: string;
   enabled: boolean;
 
@@ -20,6 +20,12 @@ export interface ISource {
   bilibili?: {
     uid: string;                // UP主用户ID
     fans?: string;
+  };
+
+  douyin?: {
+    userId: string;             // 抖音用户ID
+    fans?: string;
+    description?: string;
   };
 
   tacter?: {
@@ -42,7 +48,7 @@ const SourceSchema = new mongoose.Schema<ISource>(
   {
     platform: {
       type: String,
-      enum: ['YouTube', 'Bilibili', 'Tacter', 'TFTimes'],
+      enum: ['YouTube', 'Bilibili', 'Douyin', 'Tacter', 'TFTimes'],
       required: [true, '平台类型必填'],
     },
     name: {
@@ -72,6 +78,13 @@ const SourceSchema = new mongoose.Schema<ISource>(
       fans: String,
     },
 
+    // 抖音配置
+    douyin: {
+      userId: String,
+      fans: String,
+      description: String,
+    },
+
     // Tacter 配置
     tacter: {
       username: String,
@@ -95,7 +108,11 @@ SourceSchema.index({ platform: 1, enabled: 1 });
 // 唯一性索引（稀疏索引，只对存在该字段的文档生效）
 SourceSchema.index({ 'youtube.id': 1 }, { unique: true, sparse: true });
 SourceSchema.index({ 'bilibili.uid': 1 }, { unique: true, sparse: true });
+SourceSchema.index({ 'douyin.userId': 1 }, { unique: true, sparse: true });
 SourceSchema.index({ 'tacter.username': 1 }, { unique: true, sparse: true });
 
-// 导出模型（防止重复编译）
+// 导出模型（开发环境下强制重新注册以避免热重载缓存问题）
+if (process.env.NODE_ENV === 'development' && mongoose.models.Source) {
+  delete mongoose.models.Source;
+}
 export default mongoose.models.Source || mongoose.model<ISource>('Source', SourceSchema);

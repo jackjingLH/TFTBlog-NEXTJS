@@ -20,6 +20,13 @@ function getProxiedImageUrl(imageUrl: string | undefined): string | undefined {
     return `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
   }
 
+  // 抖音图片需要代理（防盗链）
+  const isDouyin = imageUrl.includes('douyinpic.com') || imageUrl.includes('douyin.com');
+  if (isDouyin) {
+    // 使用代理API
+    return `/api/image-proxy?url=${encodeURIComponent(imageUrl)}`;
+  }
+
   // 其他图片直接返回原URL
   return imageUrl;
 }
@@ -66,6 +73,16 @@ const platforms: Platform[] = [
       { id: 'tft_master', name: '云顶大师兄', count: 267 },
       { id: 'king', name: '王者导师', count: 198 },
       { id: 'pro_guide', name: '职业攻略君', count: 176 }
+    ]
+  },
+  {
+    id: 'douyin',
+    name: '抖音',
+    icon: '🎵',
+    color: 'bg-cyan-500',
+    authors: [
+      // 作者数据将从 API 动态加载
+      { id: 'jcc700', name: '金铲铲700', count: 0 }
     ]
   },
   {
@@ -134,7 +151,7 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
           }));
 
           // 映射平台名称到平台ID
-          if (platformName === 'B站') {
+          if (platformName === 'Bilibili') {
             authorsData['bilibili'] = authorList;
           } else if (platformName === 'TFTimes') {
             authorsData['tftimes'] = authorList;
@@ -142,6 +159,8 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
             authorsData['youtube'] = authorList;
           } else if (platformName === 'Tacter') {
             authorsData['tacter'] = authorList;
+          } else if (platformName === 'Douyin') {
+            authorsData['douyin'] = authorList;
           }
         });
 
@@ -176,10 +195,11 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
       if (filterPlatform !== 'all') {
         // 映射平台 ID 到数据库中的平台名称
         const platformMap: Record<string, string> = {
-          'bilibili': 'B站',
+          'bilibili': 'Bilibili',
           'tftimes': 'TFTimes',
           'youtube': 'YouTube',
           'tacter': 'Tacter',
+          'douyin': 'Douyin',
         };
         apiUrl += `&platform=${platformMap[filterPlatform] || filterPlatform}`;
       }
@@ -327,9 +347,10 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
   const getPlatformBg = (platform: string) => {
     const colors: Record<string, string> = {
       'YouTube': 'bg-gradient-to-br from-red-500 to-red-600',
-      'B站': 'bg-gradient-to-br from-pink-500 to-pink-600',
+      'Bilibili': 'bg-gradient-to-br from-pink-500 to-pink-600',
       'TFTimes': 'bg-gradient-to-br from-blue-500 to-blue-600',
-      'Tacter': 'bg-gradient-to-br from-indigo-500 to-indigo-600'
+      'Tacter': 'bg-gradient-to-br from-indigo-500 to-indigo-600',
+      'Douyin': 'bg-gradient-to-br from-cyan-500 to-cyan-600'
     };
     return colors[platform] || 'bg-gradient-to-br from-gray-500 to-gray-600';
   };
@@ -541,9 +562,10 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/20 pointer-events-none -mt-8">
                     <div className="text-7xl">
                       {article.platform === 'YouTube' && '▶️'}
-                      {article.platform === 'B站' && '📺'}
+                      {article.platform === 'Bilibili' && '📺'}
                       {article.platform === 'TFTimes' && '🏆'}
                       {article.platform === 'Tacter' && '🎯'}
+                      {article.platform === 'Douyin' && '🎵'}
                     </div>
                   </div>
                 )}

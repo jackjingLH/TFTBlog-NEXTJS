@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // 2. 解析请求体
     const body = await request.json();
-    const { platform, name, youtube, bilibili, tacter, tftimes } = body;
+    const { platform, name, youtube, bilibili, douyin, tacter, tftimes } = body;
 
     // 3. 基本验证
     if (!platform || !name) {
@@ -103,6 +103,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (platform === 'Douyin') {
+      if (!douyin?.userId) {
+        return NextResponse.json(
+          { status: 'error', message: '抖音数据源需要提供 douyin.userId' },
+          { status: 400 }
+        );
+      }
+    }
+
     if (platform === 'Tacter') {
       if (!tacter?.username) {
         return NextResponse.json(
@@ -130,6 +139,8 @@ export async function POST(request: NextRequest) {
       existingQuery = { 'youtube.id': youtube.id };
     } else if (platform === 'Bilibili' && bilibili?.uid) {
       existingQuery = { 'bilibili.uid': bilibili.uid };
+    } else if (platform === 'Douyin' && douyin?.userId) {
+      existingQuery = { 'douyin.userId': douyin.userId };
     } else if (platform === 'Tacter' && tacter?.username) {
       existingQuery = { 'tacter.username': tacter.username };
     } else if (platform === 'TFTimes') {
@@ -153,6 +164,7 @@ export async function POST(request: NextRequest) {
       enabled: true,
       youtube,
       bilibili,
+      douyin,
       tacter,
       tftimes,
     });

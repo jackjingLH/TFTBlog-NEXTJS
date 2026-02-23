@@ -42,6 +42,8 @@ export async function GET(request: NextRequest) {
       'youtube.com',         // YouTube
       'ytimg.com',           // YouTube
       'ggpht.com',           // YouTube
+      'douyinpic.com',       // 抖音CDN
+      'douyin.com',          // 抖音
     ];
 
     const isAllowed = allowedDomains.some(domain =>
@@ -55,11 +57,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 根据域名设置不同的 Referer
+    let referer = 'https://www.bilibili.com/'; // 默认B站
+    if (url.hostname.includes('douyinpic.com') || url.hostname.includes('douyin.com')) {
+      referer = 'https://www.douyin.com/';
+    }
+
     // 请求图片
     const response = await fetch(imageUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://www.bilibili.com/', // 伪装成从B站请求
+        'Referer': referer,
       },
     });
 

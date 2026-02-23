@@ -8,6 +8,7 @@ const PLATFORMS = {
   YouTube: { name: 'YouTube', icon: '📺', color: 'text-red-600' },
   Tacter: { name: 'Tacter', icon: '📖', color: 'text-purple-600' },
   'B站': { name: 'B站', icon: '📹', color: 'text-pink-600' },
+  Douyin: { name: '抖音', icon: '🎵', color: 'text-cyan-600' },
 };
 
 interface SourceStats {
@@ -25,6 +26,7 @@ interface Source {
   enabled: boolean;
   youtube?: { type: string; id: string; fans?: string; description?: string };
   bilibili?: { uid: string; fans?: string };
+  douyin?: { userId: string; fans?: string; description?: string };
   tacter?: { username: string; description?: string };
   tftimes?: { category: string };
 }
@@ -395,6 +397,18 @@ export default function AggregationPage() {
                               )}
                             </div>
                           )}
+                          {source.douyin && (
+                            <div className="mt-2 space-y-1">
+                              <p className="text-xs text-gray-600 dark:text-gray-400">
+                                ID: {source.douyin.userId.substring(0, 20)}...
+                              </p>
+                              {source.douyin.fans && (
+                                <p className="text-xs text-gray-500 dark:text-gray-500">
+                                  {source.douyin.fans} 粉丝
+                                </p>
+                              )}
+                            </div>
+                          )}
                           {source.tacter && (
                             <div className="mt-2">
                               <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -476,6 +490,10 @@ function AddSourceModal({
     // Bilibili
     bilibiliUid: '',
     bibiliFans: '',
+    // Douyin
+    douyinUserId: '',
+    douyinFans: '',
+    douyinDescription: '',
     // Tacter
     tacterUsername: '',
     tacterDescription: '',
@@ -505,6 +523,12 @@ function AddSourceModal({
           uid: formData.bilibiliUid,
           fans: formData.bibiliFans,
         };
+      } else if (platform === 'Douyin') {
+        payload.douyin = {
+          userId: formData.douyinUserId,
+          fans: formData.douyinFans,
+          description: formData.douyinDescription,
+        };
       } else if (platform === 'Tacter') {
         payload.tacter = {
           username: formData.tacterUsername,
@@ -533,7 +557,10 @@ function AddSourceModal({
     }
   };
 
-  const platformName = platform === 'YouTube' ? 'YouTube 频道' : platform === 'Bilibili' ? 'B站 UP主' : 'Tacter 作者';
+  const platformName = platform === 'YouTube' ? 'YouTube 频道' :
+                        platform === 'Bilibili' ? 'B站 UP主' :
+                        platform === 'Douyin' ? '抖音账号' :
+                        platform === 'Tacter' ? 'Tacter 作者' : platform;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -658,6 +685,54 @@ function AddSourceModal({
                   onChange={(e) => setFormData({ ...formData, bibiliFans: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="如 186万"
+                />
+              </div>
+            </>
+          )}
+
+          {/* Douyin 特定字段 */}
+          {platform === 'Douyin' && (
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  抖音用户 ID *
+                </label>
+                <input
+                  type="text"
+                  value={formData.douyinUserId}
+                  onChange={(e) => setFormData({ ...formData, douyinUserId: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="如 MS4wLjABAAAA..."
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  从抖音主页 URL 中获取用户 ID
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  粉丝数
+                </label>
+                <input
+                  type="text"
+                  value={formData.douyinFans}
+                  onChange={(e) => setFormData({ ...formData, douyinFans: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="如 50万"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  描述
+                </label>
+                <textarea
+                  value={formData.douyinDescription}
+                  onChange={(e) => setFormData({ ...formData, douyinDescription: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  rows={3}
+                  placeholder="账号描述"
                 />
               </div>
             </>

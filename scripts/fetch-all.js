@@ -3,7 +3,7 @@
  *
  * 功能：
  * - 串行执行所有数据抓取任务
- * - 支持 B站 (Bilibili)、TFT Times、YouTube 和 Tacter
+ * - 支持 B站 (Bilibili)、抖音 (Douyin)、TFT Times、YouTube 和 Tacter
  * - 支持指定平台抓取
  * - 汇总统计信息
  *
@@ -39,6 +39,11 @@ const ALL_SCRIPTS = [
     name: 'Bilibili',
     path: path.join(__dirname, 'smart-fetch-bilibili.js'),
     description: 'B站UP主视频抓取',
+  },
+  {
+    name: 'Douyin',
+    path: path.join(__dirname, 'fetch-douyin.js'),
+    description: '抖音账号视频抓取',
   },
 ];
 

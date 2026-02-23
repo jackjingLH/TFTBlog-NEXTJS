@@ -180,6 +180,14 @@ function parseArticles(html) {
         }
       }
 
+      // 根据分类设置 author，与 sources 集合保持一致
+      let author = 'TFT Times - ニュース';  // 默认分类
+      if (category.includes('メタ') || category.includes('攻略')) {
+        author = 'TFT Times - メタ＆攻略';
+      } else if (category.includes('パッチ')) {
+        author = 'TFT Times - パッチノート';
+      }
+
       articles.push({
         id,
         title,
@@ -187,7 +195,7 @@ function parseArticles(html) {
         link,
         thumbnail,
         platform: 'TFTimes',
-        author: 'TFTimes',
+        author,  // 修复：使用分类对应的 author，与 sources 集合保持一致
         category,
         publishedAt,
         fetchedAt: new Date(),
