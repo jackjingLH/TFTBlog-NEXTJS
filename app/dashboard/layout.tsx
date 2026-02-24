@@ -14,7 +14,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-bgDark-800">
       {/* 侧边栏 + 内容区域 */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex gap-8">
@@ -24,7 +24,7 @@ export default async function DashboardLayout({
           </aside>
 
           {/* 主内容区 */}
-          <main className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6">
+          <main className="flex-1 bg-bgDark-700 rounded-lg shadow-sm p-6 border border-border">
             {children}
           </main>
         </div>

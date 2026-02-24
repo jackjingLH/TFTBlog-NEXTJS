@@ -37,7 +37,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+      <h2 className="text-2xl font-bold text-textLight-100 mb-6">
         数据统计
       </h2>
 
@@ -50,8 +50,8 @@ export default async function DashboardPage() {
       </div>
 
       {/* 平台分布 */}
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="bg-bgDark-600 rounded-lg p-6 border border-border">
+        <h3 className="text-lg font-semibold text-textLight-100 mb-4">
           平台分布
         </h3>
         <div className="space-y-3">
@@ -60,10 +60,10 @@ export default async function DashboardPage() {
               key={platform._id}
               className="flex justify-between items-center"
             >
-              <span className="text-gray-700 dark:text-gray-300">
+              <span className="text-textLight-200">
                 {platform._id}
               </span>
-              <span className="font-semibold text-gray-900 dark:text-white">
+              <span className="font-semibold text-primary-400">
                 {platform.count} 篇
               </span>
             </div>
@@ -84,14 +84,14 @@ function StatCard({
   icon: string;
 }) {
   return (
-    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-6">
+    <div className="bg-primary-500/10 rounded-lg p-6 border border-primary-500/30">
       <div className="flex items-center justify-between mb-2">
         <span className="text-2xl">{icon}</span>
-        <span className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+        <span className="text-3xl font-bold text-primary-400">
           {value}
         </span>
       </div>
-      <p className="text-sm text-gray-600 dark:text-gray-400">{title}</p>
+      <p className="text-sm text-textLight-200">{title}</p>
     </div>
   );
 }

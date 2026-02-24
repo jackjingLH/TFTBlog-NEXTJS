@@ -4,11 +4,11 @@ import { useState, useRef, useEffect } from 'react';
 
 // 可用的平台列表
 const PLATFORMS = [
-  { name: 'TFTimes', label: 'TFT Times', icon: '🇯🇵', color: 'from-blue-600 to-blue-700' },
-  { name: 'YouTube', label: 'YouTube', icon: '📺', color: 'from-red-600 to-red-700' },
-  { name: 'Tacter', label: 'Tacter', icon: '📖', color: 'from-purple-600 to-purple-700' },
-  { name: 'Bilibili', label: 'B站', icon: '📹', color: 'from-pink-600 to-pink-700' },
-  { name: 'Douyin', label: '抖音', icon: '🎵', color: 'from-cyan-600 to-cyan-700' },
+  { name: 'TFTimes', label: 'TFT Times', icon: '🇯🇵', color: 'from-primary-500 to-primary-600' },
+  { name: 'YouTube', label: 'YouTube', icon: '📺', color: 'from-primary-500 to-primary-600' },
+  { name: 'Tacter', label: 'Tacter', icon: '📖', color: 'from-primary-500 to-primary-600' },
+  { name: 'Bilibili', label: 'B站', icon: '📹', color: 'from-primary-500 to-primary-600' },
+  { name: 'Douyin', label: '抖音', icon: '🎵', color: 'from-primary-500 to-primary-600' },
 ];
 
 export default function FetchDataPage() {
@@ -96,34 +96,48 @@ export default function FetchDataPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
+      <h2 className="text-2xl font-bold text-textLight-100 mb-6">
         数据抓取
       </h2>
 
       <div className="space-y-6">
         {/* 操作按钮区域 */}
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-6">
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="bg-gradient-to-br from-primary-500/20 to-primary-600/10 rounded-xl p-8 border-2 border-primary-500/40 shadow-lg">
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-textLight-100 mb-2">
               执行抓取任务
             </h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+            <p className="text-sm text-textLight-200">
               从 TFT Times、YouTube、Tacter、Bilibili 和抖音抓取最新的云顶之弈内容
             </p>
           </div>
 
           {/* 全部抓取按钮 */}
-          <div className="mb-4">
+          <div className="mb-6 bg-bgDark-700/50 rounded-lg p-4 backdrop-blur-sm">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => handleFetch()}
                 disabled={isFetching}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white font-semibold rounded-lg hover:from-green-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
+                className="inline-flex items-center px-8 py-4 text-white text-lg font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:shadow-2xl hover:scale-105 border-2"
+                style={{
+                  background: 'linear-gradient(to right, #D68910, #B8700B)',
+                  borderColor: 'rgba(214, 137, 16, 0.4)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isFetching) {
+                    e.currentTarget.style.background = 'linear-gradient(to right, #E69A1A, #C97D0F)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isFetching) {
+                    e.currentTarget.style.background = 'linear-gradient(to right, #D68910, #B8700B)';
+                  }
+                }}
               >
                 {isFetching ? (
                   <>
                     <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      className="animate-spin -ml-1 mr-3 h-6 w-6 text-white"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -146,7 +160,7 @@ export default function FetchDataPage() {
                   </>
                 ) : (
                   <>
-                    <span className="text-xl mr-2">🔄</span>
+                    <span className="text-2xl mr-2">🔄</span>
                     抓取全部平台
                   </>
                 )}
@@ -155,7 +169,7 @@ export default function FetchDataPage() {
               {isFetching && (
                 <button
                   onClick={handleStop}
-                  className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-red-600 to-red-700 text-white font-semibold rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg"
+                  className="inline-flex items-center px-6 py-3 bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600 transition-all shadow-md hover:shadow-lg"
                 >
                   <span className="text-xl mr-2">🛑</span>
                   停止
@@ -165,7 +179,7 @@ export default function FetchDataPage() {
               {logs.length > 0 && !isFetching && (
                 <button
                   onClick={() => setLogs([])}
-                  className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                  className="text-sm text-textLight-300 hover:text-textLight-100 transition-colors"
                 >
                   清空日志
                 </button>
@@ -174,11 +188,11 @@ export default function FetchDataPage() {
           </div>
 
           {/* 分隔线 */}
-          <div className="border-t border-gray-300 dark:border-gray-600 my-4"></div>
+          <div className="border-t border-primary-500/30 my-6"></div>
 
           {/* 单个平台按钮 */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+          <div className="bg-bgDark-700/50 rounded-lg p-4 backdrop-blur-sm">
+            <h4 className="text-base font-semibold text-textLight-100 mb-4">
               抓取指定平台
             </h4>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -187,9 +201,25 @@ export default function FetchDataPage() {
                   key={platform.name}
                   onClick={() => handleFetch(platform.name)}
                   disabled={isFetching}
-                  className={`inline-flex items-center justify-center px-4 py-2 bg-gradient-to-r ${platform.color} text-white font-medium rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all`}
+                  className="inline-flex items-center justify-center px-4 py-3 text-white font-semibold rounded-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md border"
+                  style={{
+                    background: 'linear-gradient(to right, #D68910, #B8700B)',
+                    borderColor: 'rgba(214, 137, 16, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isFetching) {
+                      e.currentTarget.style.boxShadow = '0 10px 40px -10px rgba(214, 137, 16, 0.5)';
+                      e.currentTarget.style.background = 'linear-gradient(to right, #E69A1A, #C97D0F)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isFetching) {
+                      e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1)';
+                      e.currentTarget.style.background = 'linear-gradient(to right, #D68910, #B8700B)';
+                    }
+                  }}
                 >
-                  <span className="mr-2">{platform.icon}</span>
+                  <span className="mr-2 text-lg">{platform.icon}</span>
                   {platform.label}
                 </button>
               ))}
@@ -230,12 +260,12 @@ export default function FetchDataPage() {
 
         {/* 空状态提示 */}
         {logs.length === 0 && !isFetching && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 p-12 text-center">
+          <div className="bg-bgDark-600 rounded-lg border-2 border-dashed border-border p-12 text-center">
             <div className="text-6xl mb-4">📦</div>
-            <p className="text-gray-600 dark:text-gray-400 text-lg mb-2">
+            <p className="text-textLight-200 text-lg mb-2">
               暂无日志
             </p>
-            <p className="text-gray-500 dark:text-gray-500 text-sm">
+            <p className="text-textLight-300 text-sm">
               点击"开始抓取"按钮执行数据抓取任务
             </p>
           </div>

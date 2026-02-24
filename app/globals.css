@@ -3,15 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0f1419;
+  --foreground: #ffffff;
 }
 
 body {
@@ -37,16 +30,16 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #4ec9b0 0%, #3a9d88 100%);
+  background: linear-gradient(135deg, #FF8500 0%, #FF6B00 100%);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #5ed9c0 0%, #4aad98 100%);
+  background: linear-gradient(135deg, #FFA500 0%, #FF8500 100%);
 }
 
 /* Firefox 滚动条 */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #4ec9b0 rgba(30, 35, 48, 0.3);
+  scrollbar-color: #FF8500 rgba(30, 35, 48, 0.3);
 }

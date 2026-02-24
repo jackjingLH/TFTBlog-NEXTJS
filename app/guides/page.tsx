@@ -11,10 +11,10 @@ export default function GuidesPage() {
 
   // 如果没有攻略，显示提示
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className="min-h-screen bg-bgDark-800 flex items-center justify-center">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">暂无攻略内容</h1>
-        <p className="text-gray-600">请在 public/guides/ 目录下添加 markdown 文件</p>
+        <h1 className="text-2xl font-bold text-textLight-100 mb-4">暂无攻略内容</h1>
+        <p className="text-textLight-200">请在 public/guides/ 目录下添加 markdown 文件</p>
       </div>
     </div>
   );

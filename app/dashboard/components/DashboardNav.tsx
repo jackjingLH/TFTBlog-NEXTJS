@@ -15,7 +15,7 @@ export default function DashboardNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+    <nav className="bg-bgDark-700 rounded-lg shadow-sm p-4 border border-border">
       <ul className="space-y-2">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -25,8 +25,8 @@ export default function DashboardNav() {
                 href={item.href}
                 className={`flex items-center space-x-3 px-4 py-2 rounded-lg transition-colors ${
                   isActive
-                    ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    ? 'bg-primary-500/20 text-primary-400'
+                    : 'text-textLight-200 hover:bg-bgDark-600'
                 }`}
               >
                 <span>{item.icon}</span>

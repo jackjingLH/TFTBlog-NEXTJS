@@ -57,7 +57,7 @@ const platforms: Platform[] = [
     id: 'tftimes',
     name: 'TFTimes',
     icon: '🏆',
-    color: 'bg-red-600',
+    color: 'bg-primary-500',
     authors: [
       { id: 'official', name: '官方资讯', count: 0 },
       { id: 'strategy', name: '攻略解析', count: 0 },
@@ -68,7 +68,7 @@ const platforms: Platform[] = [
     id: 'bilibili',
     name: 'B站',
     icon: '📺',
-    color: 'bg-pink-500',
+    color: 'bg-primary-500',
     authors: [
       { id: 'tft_master', name: '云顶大师兄', count: 267 },
       { id: 'king', name: '王者导师', count: 198 },
@@ -79,7 +79,7 @@ const platforms: Platform[] = [
     id: 'douyin',
     name: '抖音',
     icon: '🎵',
-    color: 'bg-cyan-500',
+    color: 'bg-primary-500',
     authors: [
       // 作者数据将从 API 动态加载
       { id: 'jcc700', name: '金铲铲700', count: 0 }
@@ -89,7 +89,7 @@ const platforms: Platform[] = [
     id: 'youtube',
     name: 'YouTube',
     icon: '▶️',
-    color: 'bg-red-600',
+    color: 'bg-primary-500',
     authors: [
       // 作者数据将从 API 动态加载
       { id: 'reroll', name: 'Reroll', count: 0 },
@@ -101,7 +101,7 @@ const platforms: Platform[] = [
     id: 'tacter',
     name: 'Tacter',
     icon: '🎯',
-    color: 'bg-indigo-600',
+    color: 'bg-primary-500',
     authors: [
       // 作者数据将从 API 动态加载
       { id: 'tftips', name: 'TFTips', count: 0 },
@@ -331,48 +331,33 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
 
   // 获取分类标签颜色
   const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      '阵容攻略': 'bg-blue-100 text-blue-800',
-      '英雄解析': 'bg-green-100 text-green-800',
-      '装备合成': 'bg-purple-100 text-purple-800',
-      '版本更新': 'bg-orange-100 text-orange-800',
-      '新手教程': 'bg-pink-100 text-pink-800',
-      '视频': 'bg-purple-100 text-purple-800',
-      '攻略': 'bg-blue-100 text-blue-800'
-    };
-    return colors[category] || 'bg-gray-100 text-gray-800';
+    // 统一使用橙色系，不再区分不同分类
+    return 'bg-primary-500/20 text-primary-400';
   };
 
-  // 获取平台默认背景色
+  // 获取平台默认背景色 - 统一深色背景，不再使用彩色渐变
   const getPlatformBg = (platform: string) => {
-    const colors: Record<string, string> = {
-      'YouTube': 'bg-gradient-to-br from-red-500 to-red-600',
-      'Bilibili': 'bg-gradient-to-br from-pink-500 to-pink-600',
-      'TFTimes': 'bg-gradient-to-br from-blue-500 to-blue-600',
-      'Tacter': 'bg-gradient-to-br from-indigo-500 to-indigo-600',
-      'Douyin': 'bg-gradient-to-br from-cyan-500 to-cyan-600'
-    };
-    return colors[platform] || 'bg-gradient-to-br from-gray-500 to-gray-600';
+    return 'bg-bgDark-700';
   };
 
   return (
     <div className="w-full">
 
       {/* 筛选控制区 */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="bg-bgDark-700 rounded-xl shadow-sm border border-border p-6 mb-6">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           {/* 左侧筛选标签 */}
           <div className="flex flex-wrap items-center gap-3">
             {/* 平台选择 */}
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-700">平台：</span>
+              <span className="text-sm font-medium text-textLight-200">平台：</span>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => handlePlatformChange('all')}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     selectedPlatform === 'all'
-                      ? 'bg-gray-900 text-white shadow-md'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-primary-500 text-white shadow-md'
+                      : 'bg-bgDark-600 text-textLight-200 hover:bg-bgDark-500'
                   }`}
                 >
                   全部平台
@@ -384,7 +369,7 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all flex items-center gap-1 ${
                       selectedPlatform === platform.id
                         ? `${platform.color.replace('bg-', 'bg-')} text-white shadow-md`
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        : 'bg-bgDark-600 text-textLight-200 hover:bg-bgDark-500'
                     }`}
                   >
                     <span>{platform.icon}</span>
@@ -397,14 +382,14 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
             {/* 作者选择 - 仅在选择平台后显示 */}
             {selectedPlatform !== 'all' && currentAuthors.length > 0 && (
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">博主：</span>
+                <span className="text-sm font-medium text-textLight-200">博主：</span>
                 <div className="relative">
                   <button
                     onClick={() => setShowAuthorDropdown(!showAuthorDropdown)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all min-w-[120px] text-left flex items-center justify-between ${
                       selectedAuthor === 'all'
-                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        : 'bg-blue-100 text-blue-800'
+                        ? 'bg-bgDark-600 text-textLight-200 hover:bg-bgDark-500'
+                        : 'bg-primary-500/20 text-primary-400'
                     }`}
                   >
                     {selectedAuthor === 'all'
@@ -422,26 +407,50 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                   </button>
 
                   {showAuthorDropdown && (
-                    <div className="absolute top-full left-0 mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                    <div className="absolute top-full left-0 mt-1 w-48 rounded-lg shadow-2xl z-50 max-h-96 overflow-y-auto" style={{ backgroundColor: '#1a1a2e', border: '1px solid #2d2d44' }}>
                       <button
                         onClick={() => handleAuthorChange('all')}
-                        className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors ${
-                          selectedAuthor === 'all' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                        className={`w-full px-3 py-2 text-left text-sm transition-colors first:rounded-t-lg ${
+                          selectedAuthor === 'all' ? 'text-primary-400 font-medium' : 'text-textLight-200'
                         }`}
+                        style={{ backgroundColor: selectedAuthor === 'all' ? 'rgba(255, 133, 0, 0.2)' : '#1a1a2e' }}
+                        onMouseEnter={(e) => {
+                          if (selectedAuthor !== 'all') {
+                            e.currentTarget.style.backgroundColor = '#232339';
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (selectedAuthor !== 'all') {
+                            e.currentTarget.style.backgroundColor = '#1a1a2e';
+                          }
+                        }}
                       >
                         全部博主
                       </button>
-                      {currentAuthors.map((author) => (
+                      {currentAuthors.map((author, index) => (
                         <button
                           key={author.id}
                           onClick={() => handleAuthorChange(author.id)}
-                          className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-50 transition-colors flex items-center justify-between ${
-                            selectedAuthor === author.id ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-700'
+                          className={`w-full px-3 py-2 text-left text-sm transition-colors flex items-center justify-between ${
+                            index === currentAuthors.length - 1 ? 'rounded-b-lg' : ''
+                          } ${
+                            selectedAuthor === author.id ? 'text-primary-400 font-medium' : 'text-textLight-200'
                           }`}
+                          style={{ backgroundColor: selectedAuthor === author.id ? 'rgba(255, 133, 0, 0.2)' : '#1a1a2e' }}
+                          onMouseEnter={(e) => {
+                            if (selectedAuthor !== author.id) {
+                              e.currentTarget.style.backgroundColor = '#232339';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (selectedAuthor !== author.id) {
+                              e.currentTarget.style.backgroundColor = '#1a1a2e';
+                            }
+                          }}
                         >
                           <span>{author.name}</span>
                           {author.count && (
-                            <span className="text-xs text-gray-500">{author.count}</span>
+                            <span className="text-xs text-textLight-300">{author.count}</span>
                           )}
                         </button>
                       ))}
@@ -455,7 +464,7 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
           {/* 右侧更新时间 */}
           {lastUpdated && (
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-textLight-300">
                 更新于 {formatTime(lastUpdated)}
               </span>
             </div>
@@ -465,17 +474,17 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
 
       {/* 加载状态 */}
       {loading && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+        <div className="bg-bgDark-700 rounded-xl shadow-sm border border-border p-12">
           <div className="flex flex-col items-center justify-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-600"></div>
-            <p className="text-gray-600 mt-4">加载中...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-bgDark-600 border-t-primary-500"></div>
+            <p className="text-textLight-200 mt-4">加载中...</p>
           </div>
         </div>
       )}
 
       {/* 错误提示 */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-4">
+        <div className="bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-lg mb-4">
           {error}
         </div>
       )}
@@ -490,7 +499,7 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                 href={article.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative bg-white rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 overflow-hidden hover:-translate-y-1 min-h-[200px]"
+                className="group relative bg-bgDark-700 rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-border overflow-hidden hover:-translate-y-1 min-h-[200px]"
                 style={{
                   backgroundImage: article.thumbnail
                     ? `url("${getProxiedImageUrl(article.thumbnail)}")`
@@ -512,12 +521,12 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                   <div className="absolute top-4 left-5 right-5 flex items-start justify-between">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium shadow-lg ${
                       article.thumbnail
-                        ? 'bg-white/90 text-gray-900'
+                        ? 'bg-primary-500/30 text-primary-300 backdrop-blur-sm'
                         : getCategoryColor(article.category || '')
                     }`}>
                       {article.category}
                     </span>
-                    <div className="text-white/80 group-hover:text-white transition-colors">
+                    <div className="text-primary-400 group-hover:text-primary-300 transition-colors">
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
@@ -527,12 +536,12 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                   {/* 底部：标题和信息 - 靠底部对齐 */}
                   <div className="pt-12">
                     {/* 文章标题 */}
-                    <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:scale-105 transition-transform text-white">
+                    <h3 className="text-lg font-semibold mb-2 line-clamp-2 group-hover:scale-105 transition-transform text-textLight-100">
                       {article.title}
                     </h3>
 
                     {/* 文章描述 */}
-                    <p className="text-sm mb-3 line-clamp-2 text-white/80">
+                    <p className="text-sm mb-3 line-clamp-2 text-textLight-200">
                       {article.description}
                     </p>
 
@@ -541,16 +550,16 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                       <div className="flex items-center gap-2">
                         <span className={`inline-flex items-center px-2 py-1 rounded-md font-medium ${
                           article.thumbnail
-                            ? 'bg-white/20 text-white backdrop-blur-sm'
-                            : 'bg-white/20 text-white'
+                            ? 'bg-primary-500/30 text-primary-300 backdrop-blur-sm'
+                            : 'bg-primary-500/30 text-primary-300'
                         }`}>
                           {article.platform}
                         </span>
-                        <span className="truncate max-w-[120px] text-white/80">
+                        <span className="truncate max-w-[120px] text-textLight-200">
                           {article.author}
                         </span>
                       </div>
-                      <span className="text-white/80">
+                      <span className="text-textLight-200">
                         {formatTime(article.publishedAt)}
                       </span>
                     </div>
@@ -559,7 +568,7 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
 
                 {/* 无图片时显示平台图标 */}
                 {!article.thumbnail && (
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white/20 pointer-events-none -mt-8">
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-primary-500/20 pointer-events-none -mt-8">
                     <div className="text-7xl">
                       {article.platform === 'YouTube' && '▶️'}
                       {article.platform === 'Bilibili' && '📺'}
@@ -576,8 +585,8 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
           {/* 加载更多指示器 */}
           {loadingMore && (
             <div className="mt-8 flex justify-center">
-              <div className="inline-flex items-center px-4 py-2 text-sm text-gray-600">
-                <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-gray-300 border-t-blue-600 mr-2"></div>
+              <div className="inline-flex items-center px-4 py-2 text-sm text-textLight-200">
+                <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-bgDark-600 border-t-primary-500 mr-2"></div>
                 加载更多内容...
               </div>
             </div>
@@ -590,7 +599,7 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
 
           {/* 已加载全部提示 */}
           {!hasMore && !loadingMore && (
-            <div className="mt-8 text-center text-sm text-gray-500">
+            <div className="mt-8 text-center text-sm text-textLight-300">
               已加载全部内容
             </div>
           )}
@@ -599,10 +608,10 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
 
       {/* 空状态 */}
       {!loading && !error && articles.length === 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
-          <div className="text-center text-gray-500">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-bgDark-700 rounded-xl shadow-sm border border-border p-12">
+          <div className="text-center text-textLight-200">
+            <div className="w-16 h-16 bg-bgDark-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-textLight-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>

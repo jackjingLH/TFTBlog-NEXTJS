@@ -109,7 +109,7 @@ export default function GuidesManagementPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="text-gray-600 dark:text-gray-400">加载中...</div>
+        <div className="text-textLight-200">加载中...</div>
       </div>
     );
   }
@@ -117,11 +117,11 @@ export default function GuidesManagementPage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold text-textLight-100">
           攻略管理
         </h2>
         <div className="flex items-center gap-4">
-          <div className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="text-sm text-textLight-200">
             共 {guides.length} 个攻略
           </div>
           <label className="cursor-pointer">
@@ -132,7 +132,7 @@ export default function GuidesManagementPage() {
               disabled={uploading}
               className="hidden"
             />
-            <span className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm">
+            <span className="inline-flex items-center px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors text-sm">
               {uploading ? '上传中...' : '上传攻略 ZIP'}
             </span>
           </label>
@@ -140,38 +140,38 @@ export default function GuidesManagementPage() {
       </div>
 
       {guides.length === 0 ? (
-        <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+        <div className="text-center py-12 text-textLight-200">
           暂无攻略
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-            <thead className="bg-gray-50 dark:bg-gray-900">
+          <table className="min-w-full bg-bgDark-600 border border-border rounded-lg">
+            <thead className="bg-bgDark-700 border-b border-border">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-textLight-300 uppercase tracking-wider">
                   标题
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-textLight-300 uppercase tracking-wider">
                   文件夹名
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-textLight-300 uppercase tracking-wider">
                   操作
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-border">
               {guides.map((guide) => (
                 <tr
                   key={guide.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  className="hover:bg-bgDark-500 transition-colors"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    <div className="text-sm font-medium text-textLight-100">
                       {guide.title}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div className="text-sm text-textLight-200">
                       {guide.name}
                     </div>
                   </td>
@@ -179,7 +179,7 @@ export default function GuidesManagementPage() {
                     <button
                       onClick={() => handleDelete(guide.id, guide.title)}
                       disabled={deleteLoading === guide.id}
-                      className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors text-sm"
+                      className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50 transition-colors text-sm"
                     >
                       {deleteLoading === guide.id ? '删除中...' : '删除'}
                     </button>
