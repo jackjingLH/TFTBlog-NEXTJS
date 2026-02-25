@@ -1,16 +1,20 @@
-import NextAuth, { NextAuthConfig } from 'next-auth';
+import NextAuth from 'next-auth';
+import type { User, Account, Profile } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import GitHubProvider from 'next-auth/providers/github';
 import dbConnect from '@/lib/mongodb';
 import Admin from '@/models/Admin';
 import { AdminUser } from '@/types/admin';
+import { authConfig as baseAuthConfig } from './auth.config';
 
 /**
- * NextAuth.js v5 配置
+ * NextAuth.js v5 完整配置（包含数据库 providers）
+ * 基础配置在 auth.config.ts（用于 Edge Runtime middleware）
  * @see https://authjs.dev/getting-started/installation
  * @see CLAUDE.md 项目规范
  */
-export const authConfig: NextAuthConfig = {
+export const authConfig = {
+  ...baseAuthConfig,
   providers: [
     // 邮箱密码登录
     CredentialsProvider({
@@ -64,7 +68,7 @@ export const authConfig: NextAuthConfig = {
     }),
   ],
   session: {
-    strategy: 'jwt',
+    strategy: 'jwt' as const,
     maxAge: 7 * 24 * 60 * 60, // 7 天
   },
   pages: {
@@ -72,7 +76,7 @@ export const authConfig: NextAuthConfig = {
     error: '/login',
   },
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account, profile }: { user: User; account?: Account | null; profile?: Profile }) {
       // GitHub 登录时的处理
       if (account?.provider === 'github') {
         await dbConnect();
@@ -92,7 +96,7 @@ export const authConfig: NextAuthConfig = {
       }
       return true;
     },
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account }: { token: any; user?: User; account?: Account | null }) {
       // 首次登录时，将用户信息添加到 token
       if (user) {
         // 如果是 OAuth 登录，从数据库读取完整的用户信息（包含最新的 role）
@@ -114,7 +118,7 @@ export const authConfig: NextAuthConfig = {
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       // 将 token 信息传递到 session
       if (token && session.user) {
         (session.user as AdminUser).id = token.id as string;

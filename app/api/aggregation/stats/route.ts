@@ -21,6 +21,14 @@ export async function GET(request: NextRequest) {
     await dbConnect();
     const mongoose = await import('mongoose');
     const db = mongoose.connection.db;
+
+    if (!db) {
+      return NextResponse.json(
+        { status: 'error', message: '数据库连接失败' },
+        { status: 500 }
+      );
+    }
+
     const collection = db.collection('articles');
 
     // 获取一周前的时间

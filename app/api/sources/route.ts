@@ -130,21 +130,77 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    if (platform === 'TFTips') {
+      // TFTips 是固定数据源，检查是否已存在
+      const existing = await Source.findOne({ platform: 'TFTips' });
+      if (existing) {
+        return NextResponse.json(
+          { status: 'error', message: 'TFTips 数据源已存在' },
+          { status: 409 }
+        );
+      }
+    }
+
     // 5. 连接数据库
     await dbConnect();
 
+    // 5.5 数据清理：去除所有字符串字段的首尾空格
+    const cleanedName = name.trim();
+    const cleanedData: any = {};
+
+    if (youtube) {
+      cleanedData.youtube = {
+        ...youtube,
+        id: youtube.id?.trim(),
+        fans: youtube.fans?.trim?.() || youtube.fans,
+        description: youtube.description?.trim?.() || youtube.description,
+      };
+    }
+
+    if (bilibili) {
+      cleanedData.bilibili = {
+        ...bilibili,
+        uid: bilibili.uid?.trim(),
+        fans: bilibili.fans?.trim?.() || bilibili.fans,
+      };
+    }
+
+    if (douyin) {
+      cleanedData.douyin = {
+        ...douyin,
+        userId: douyin.userId?.trim(),
+        fans: douyin.fans?.trim?.() || douyin.fans,
+        description: douyin.description?.trim?.() || douyin.description,
+      };
+    }
+
+    if (tacter) {
+      cleanedData.tacter = {
+        ...tacter,
+        username: tacter.username?.trim(),
+        description: tacter.description?.trim?.() || tacter.description,
+      };
+    }
+
+    if (tftimes) {
+      cleanedData.tftimes = {
+        ...tftimes,
+        category: tftimes.category?.trim(),
+      };
+    }
+
     // 6. 检查重复
     let existingQuery: any = {};
-    if (platform === 'YouTube' && youtube?.id) {
-      existingQuery = { 'youtube.id': youtube.id };
-    } else if (platform === 'Bilibili' && bilibili?.uid) {
-      existingQuery = { 'bilibili.uid': bilibili.uid };
-    } else if (platform === 'Douyin' && douyin?.userId) {
-      existingQuery = { 'douyin.userId': douyin.userId };
-    } else if (platform === 'Tacter' && tacter?.username) {
-      existingQuery = { 'tacter.username': tacter.username };
+    if (platform === 'YouTube' && cleanedData.youtube?.id) {
+      existingQuery = { 'youtube.id': cleanedData.youtube.id };
+    } else if (platform === 'Bilibili' && cleanedData.bilibili?.uid) {
+      existingQuery = { 'bilibili.uid': cleanedData.bilibili.uid };
+    } else if (platform === 'Douyin' && cleanedData.douyin?.userId) {
+      existingQuery = { 'douyin.userId': cleanedData.douyin.userId };
+    } else if (platform === 'Tacter' && cleanedData.tacter?.username) {
+      existingQuery = { 'tacter.username': cleanedData.tacter.username };
     } else if (platform === 'TFTimes') {
-      existingQuery = { platform: 'TFTimes', name: name };
+      existingQuery = { platform: 'TFTimes', name: cleanedName };
     }
 
     if (Object.keys(existingQuery).length > 0) {
@@ -157,16 +213,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. 创建新数据源
+    // 7. 创建新数据源（使用清理后的数据）
     const newSource = await Source.create({
       platform,
-      name,
+      name: cleanedName,
       enabled: true,
-      youtube,
-      bilibili,
-      douyin,
-      tacter,
-      tftimes,
+      ...cleanedData,
     });
 
     return NextResponse.json(

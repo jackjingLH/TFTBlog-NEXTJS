@@ -2,10 +2,10 @@ import mongoose from 'mongoose';
 
 /**
  * 数据源接口定义
- * 支持 YouTube、Bilibili、Douyin、Tacter、TFTimes 五个平台
+ * 支持 YouTube、Bilibili、Douyin、Tacter、TFTimes、TFTips 六个平台
  */
 export interface ISource {
-  platform: 'YouTube' | 'Bilibili' | 'Douyin' | 'Tacter' | 'TFTimes';
+  platform: 'YouTube' | 'Bilibili' | 'Douyin' | 'Tacter' | 'TFTimes' | 'TFTips';
   name: string;
   enabled: boolean;
 
@@ -37,6 +37,10 @@ export interface ISource {
     category: string;           // TFTimes 分类
   };
 
+  tftips?: {
+    lastUpdateTime?: Date;      // 上次抓取的页面更新时间（从页面 HTML 提取）
+  };
+
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -48,7 +52,7 @@ const SourceSchema = new mongoose.Schema<ISource>(
   {
     platform: {
       type: String,
-      enum: ['YouTube', 'Bilibili', 'Douyin', 'Tacter', 'TFTimes'],
+      enum: ['YouTube', 'Bilibili', 'Douyin', 'Tacter', 'TFTimes', 'TFTips'],
       required: [true, '平台类型必填'],
     },
     name: {
@@ -94,6 +98,11 @@ const SourceSchema = new mongoose.Schema<ISource>(
     // TFTimes 配置
     tftimes: {
       category: String,
+    },
+
+    // TFTips 配置
+    tftips: {
+      lastUpdateTime: Date,
     },
   },
   {

@@ -3,7 +3,7 @@
  *
  * 功能：
  * - 串行执行所有数据抓取任务
- * - 支持 B站 (Bilibili)、抖音 (Douyin)、TFT Times、YouTube 和 Tacter
+ * - 支持 B站 (Bilibili)、抖音 (Douyin)、TFT Times、TFTips、YouTube 和 Tacter
  * - 支持指定平台抓取
  * - 汇总统计信息
  *
@@ -24,6 +24,11 @@ const ALL_SCRIPTS = [
     name: 'TFTimes',
     path: path.join(__dirname, 'fetch-tftimes.js'),
     description: 'TFT Times 官网文章抓取',
+  },
+  {
+    name: 'TFTips',
+    path: path.join(__dirname, 'fetch-tftips.js'),
+    description: 'TFTips 阵容推荐抓取',
   },
   {
     name: 'YouTube',

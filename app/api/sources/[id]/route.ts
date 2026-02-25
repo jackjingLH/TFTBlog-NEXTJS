@@ -7,7 +7,7 @@ import Article from '@/models/Article';
 /**
  * DELETE /api/sources/[id]
  * 删除指定的数据源（需要管理员权限）
- * 禁止删除 TFTimes 平台的数据源
+ * 禁止删除 TFTimes 和 TFTips 平台的数据源
  * 同时删除该博主的所有文章数据
  * @see CLAUDE.md 问题分析优先规则
  */
@@ -38,10 +38,10 @@ export async function DELETE(
       );
     }
 
-    // 4. 禁止删除 TFTimes
-    if (source.platform === 'TFTimes') {
+    // 4. 禁止删除 TFTimes 和 TFTips
+    if (source.platform === 'TFTimes' || source.platform === 'TFTips') {
       return NextResponse.json(
-        { status: 'error', message: 'TFTimes 是固定数据源，无法删除' },
+        { status: 'error', message: `${source.platform} 是固定数据源，无法删除` },
         { status: 403 }
       );
     }

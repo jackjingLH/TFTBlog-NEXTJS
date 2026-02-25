@@ -65,6 +65,16 @@ const platforms: Platform[] = [
     ]
   },
   {
+    id: 'tftips',
+    name: 'TFTips',
+    icon: 'svg', // 特殊标记，表示使用 SVG 图标
+    color: 'bg-primary-500',
+    authors: [
+      // 固定单一数据源
+      { id: 'tftips_official', name: 'TFTips', count: 0 }
+    ]
+  },
+  {
     id: 'bilibili',
     name: 'B站',
     icon: '📺',
@@ -78,7 +88,7 @@ const platforms: Platform[] = [
   {
     id: 'douyin',
     name: '抖音',
-    icon: '🎵',
+    icon: '♪',
     color: 'bg-primary-500',
     authors: [
       // 作者数据将从 API 动态加载
@@ -155,6 +165,8 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
             authorsData['bilibili'] = authorList;
           } else if (platformName === 'TFTimes') {
             authorsData['tftimes'] = authorList;
+          } else if (platformName === 'TFTips') {
+            authorsData['tftips'] = authorList;
           } else if (platformName === 'YouTube') {
             authorsData['youtube'] = authorList;
           } else if (platformName === 'Tacter') {
@@ -197,6 +209,7 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
         const platformMap: Record<string, string> = {
           'bilibili': 'Bilibili',
           'tftimes': 'TFTimes',
+          'tftips': 'TFTips',
           'youtube': 'YouTube',
           'tacter': 'Tacter',
           'douyin': 'Douyin',
@@ -372,7 +385,15 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                         : 'bg-bgDark-600 text-textLight-200 hover:bg-bgDark-500'
                     }`}
                   >
-                    <span>{platform.icon}</span>
+                    {platform.id === 'tftips' ? (
+                      <svg viewBox="0 0 24 24" className="w-4 h-4" style={{ fill: 'currentColor' }}>
+                        <path style={{ fillOpacity: 1, strokeWidth: 0.242424 }} d="m 113.50683,2.4056419 c -1.57088,0.00273 -3.14001,0.969192 -6.53485,2.9027593 -6.78969,3.8671346 -6.5339,3.4296407 -6.52003,11.1402978 0.0139,7.710655 -0.24318,7.275112 6.56038,11.118633 6.80356,3.843522 6.28989,3.843806 13.07957,-0.02333 6.78969,-3.867135 6.5339,-3.429641 6.52003,-11.140296 -0.0139,-7.710657 0.244,-7.2742803 -6.55955,-11.1178021 -3.40179,-1.9217609 -4.97469,-2.8829925 -6.54555,-2.8802637 z m 0.12351,7.0894309 c 0.77684,-0.0013 1.55385,0.465287 3.23613,1.3988902 3.36456,1.867208 3.23751,1.655546 3.24437,5.401433 0.006,3.745885 0.13391,3.533584 -3.22378,5.412262 -3.3577,1.878679 -3.10442,1.878039 -6.46897,0.01084 -3.36456,-1.867207 -3.23751,-1.654713 -3.24437,-5.400599 -0.006,-3.745885 -0.13309,-3.533584 3.22461,-5.412263 1.67885,-0.9393392 2.45517,-1.4092282 3.23201,-1.4105542 z" transform="matrix(0.82933656,0,0,0.80530515,-82.645364,-1.7181152)" />
+                      </svg>
+                    ) : (
+                      <span className={platform.id === 'douyin' ? 'text-[#FE2C55] text-lg' : ''}>
+                        {platform.icon}
+                      </span>
+                    )}
                     {platform.name}
                   </button>
                 ))}
@@ -569,13 +590,19 @@ export default function GuidesList({ initialLimit = 20 }: GuidesListProps) {
                 {/* 无图片时显示平台图标 */}
                 {!article.thumbnail && (
                   <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-primary-500/20 pointer-events-none -mt-8">
-                    <div className="text-7xl">
-                      {article.platform === 'YouTube' && '▶️'}
-                      {article.platform === 'Bilibili' && '📺'}
-                      {article.platform === 'TFTimes' && '🏆'}
-                      {article.platform === 'Tacter' && '🎯'}
-                      {article.platform === 'Douyin' && '🎵'}
-                    </div>
+                    {article.platform === 'TFTips' ? (
+                      <svg viewBox="0 0 94 23" className="w-32 h-32" style={{ fill: 'currentColor' }}>
+                        <path style={{ fillOpacity: 1, strokeWidth: 0.242424 }} d="m 113.50683,2.4056419 c -1.57088,0.00273 -3.14001,0.969192 -6.53485,2.9027593 -6.78969,3.8671346 -6.5339,3.4296407 -6.52003,11.1402978 0.0139,7.710655 -0.24318,7.275112 6.56038,11.118633 6.80356,3.843522 6.28989,3.843806 13.07957,-0.02333 6.78969,-3.867135 6.5339,-3.429641 6.52003,-11.140296 -0.0139,-7.710657 0.244,-7.2742803 -6.55955,-11.1178021 -3.40179,-1.9217609 -4.97469,-2.8829925 -6.54555,-2.8802637 z m 0.12351,7.0894309 c 0.77684,-0.0013 1.55385,0.465287 3.23613,1.3988902 3.36456,1.867208 3.23751,1.655546 3.24437,5.401433 0.006,3.745885 0.13391,3.533584 -3.22378,5.412262 -3.3577,1.878679 -3.10442,1.878039 -6.46897,0.01084 -3.36456,-1.867207 -3.23751,-1.654713 -3.24437,-5.400599 -0.006,-3.745885 -0.13309,-3.533584 3.22461,-5.412263 1.67885,-0.9393392 2.45517,-1.4092282 3.23201,-1.4105542 z" transform="matrix(0.82933656,0,0,0.80530515,-82.645364,-1.7181152)" />
+                      </svg>
+                    ) : (
+                      <div className="text-7xl">
+                        {article.platform === 'YouTube' && '▶️'}
+                        {article.platform === 'Bilibili' && '📺'}
+                        {article.platform === 'TFTimes' && '🏆'}
+                        {article.platform === 'Tacter' && '🎯'}
+                        {article.platform === 'Douyin' && '🎵'}
+                      </div>
+                    )}
                   </div>
                 )}
               </a>

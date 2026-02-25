@@ -5,10 +5,11 @@ import { useState, useEffect } from 'react';
 // 平台配置
 const PLATFORMS = {
   TFTimes: { name: 'TFT Times', icon: '🇯🇵', color: 'text-primary-400' },
+  TFTips: { name: 'TFTips', icon: 'svg', color: 'text-primary-400' },
   YouTube: { name: 'YouTube', icon: '📺', color: 'text-primary-400' },
   Tacter: { name: 'Tacter', icon: '📖', color: 'text-primary-400' },
   'B站': { name: 'B站', icon: '📹', color: 'text-primary-400' },
-  Douyin: { name: '抖音', icon: '🎵', color: 'text-primary-400' },
+  Douyin: { name: '抖音', icon: '♪', color: 'text-[#FE2C55]' },
 };
 
 interface SourceStats {
@@ -72,8 +73,8 @@ export default function AggregationPage() {
   };
 
   const handleDelete = async (id: string, name: string, platform: string) => {
-    if (platform === 'TFTimes') {
-      alert('TFTimes 是固定数据源，无法删除');
+    if (platform === 'TFTimes' || platform === 'TFTips') {
+      alert(`${platform} 是固定数据源，无法删除`);
       return;
     }
 
@@ -206,7 +207,13 @@ export default function AggregationPage() {
                 : 'bg-bgDark-600 text-textLight-200 hover:bg-bgDark-500'
             }`}
           >
-            <span className="mr-2">{platform.icon}</span>
+            {key === 'TFTips' ? (
+              <svg viewBox="0 0 24 24" className="w-4 h-4 mr-2" style={{ fill: 'currentColor' }}>
+                <path style={{ fillOpacity: 1, strokeWidth: 0.242424 }} d="m 113.50683,2.4056419 c -1.57088,0.00273 -3.14001,0.969192 -6.53485,2.9027593 -6.78969,3.8671346 -6.5339,3.4296407 -6.52003,11.1402978 0.0139,7.710655 -0.24318,7.275112 6.56038,11.118633 6.80356,3.843522 6.28989,3.843806 13.07957,-0.02333 6.78969,-3.867135 6.5339,-3.429641 6.52003,-11.140296 -0.0139,-7.710657 0.244,-7.2742803 -6.55955,-11.1178021 -3.40179,-1.9217609 -4.97469,-2.8829925 -6.54555,-2.8802637 z m 0.12351,7.0894309 c 0.77684,-0.0013 1.55385,0.465287 3.23613,1.3988902 3.36456,1.867208 3.23751,1.655546 3.24437,5.401433 0.006,3.745885 0.13391,3.533584 -3.22378,5.412262 -3.3577,1.878679 -3.10442,1.878039 -6.46897,0.01084 -3.36456,-1.867207 -3.23751,-1.654713 -3.24437,-5.400599 -0.006,-3.745885 -0.13309,-3.533584 3.22461,-5.412263 1.67885,-0.9393392 2.45517,-1.4092282 3.23201,-1.4105542 z" transform="matrix(0.82933656,0,0,0.80530515,-82.645364,-1.7181152)" />
+              </svg>
+            ) : (
+              <span className={`mr-2 ${key === 'Douyin' ? 'text-[#FE2C55] font-bold' : ''}`}>{platform.icon}</span>
+            )}
             {platform.name}
           </button>
         ))}
@@ -261,7 +268,13 @@ export default function AggregationPage() {
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <span className="text-xl mr-2">{platform?.icon || '📄'}</span>
+                      {source.platform === 'TFTips' ? (
+                        <svg viewBox="0 0 24 24" className="w-5 h-5 mr-2" style={{ fill: 'currentColor' }}>
+                          <path style={{ fillOpacity: 1, strokeWidth: 0.242424 }} d="m 113.50683,2.4056419 c -1.57088,0.00273 -3.14001,0.969192 -6.53485,2.9027593 -6.78969,3.8671346 -6.5339,3.4296407 -6.52003,11.1402978 0.0139,7.710655 -0.24318,7.275112 6.56038,11.118633 6.80356,3.843522 6.28989,3.843806 13.07957,-0.02333 6.78969,-3.867135 6.5339,-3.429641 6.52003,-11.140296 -0.0139,-7.710657 0.244,-7.2742803 -6.55955,-11.1178021 -3.40179,-1.9217609 -4.97469,-2.8829925 -6.54555,-2.8802637 z m 0.12351,7.0894309 c 0.77684,-0.0013 1.55385,0.465287 3.23613,1.3988902 3.36456,1.867208 3.23751,1.655546 3.24437,5.401433 0.006,3.745885 0.13391,3.533584 -3.22378,5.412262 -3.3577,1.878679 -3.10442,1.878039 -6.46897,0.01084 -3.36456,-1.867207 -3.23751,-1.654713 -3.24437,-5.400599 -0.006,-3.745885 -0.13309,-3.533584 3.22461,-5.412263 1.67885,-0.9393392 2.45517,-1.4092282 3.23201,-1.4105542 z" transform="matrix(0.82933656,0,0,0.80530515,-82.645364,-1.7181152)" />
+                        </svg>
+                      ) : (
+                        <span className={`text-xl mr-2 ${source.platform === 'Douyin' ? 'text-[#FE2C55] font-bold' : ''}`}>{platform?.icon || '📄'}</span>
+                      )}
                       <span className="font-medium text-primary-400">
                         {source.platform}
                       </span>
@@ -335,7 +348,13 @@ export default function AggregationPage() {
               {/* 平台标题 */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
-                  <span className="text-3xl mr-3">{platform.icon}</span>
+                  {key === 'TFTips' ? (
+                    <svg viewBox="0 0 24 24" className="w-8 h-8 mr-3" style={{ fill: 'currentColor' }}>
+                      <path style={{ fillOpacity: 1, strokeWidth: 0.242424 }} d="m 113.50683,2.4056419 c -1.57088,0.00273 -3.14001,0.969192 -6.53485,2.9027593 -6.78969,3.8671346 -6.5339,3.4296407 -6.52003,11.1402978 0.0139,7.710655 -0.24318,7.275112 6.56038,11.118633 6.80356,3.843522 6.28989,3.843806 13.07957,-0.02333 6.78969,-3.867135 6.5339,-3.429641 6.52003,-11.140296 -0.0139,-7.710657 0.244,-7.2742803 -6.55955,-11.1178021 -3.40179,-1.9217609 -4.97469,-2.8829925 -6.54555,-2.8802637 z m 0.12351,7.0894309 c 0.77684,-0.0013 1.55385,0.465287 3.23613,1.3988902 3.36456,1.867208 3.23751,1.655546 3.24437,5.401433 0.006,3.745885 0.13391,3.533584 -3.22378,5.412262 -3.3577,1.878679 -3.10442,1.878039 -6.46897,0.01084 -3.36456,-1.867207 -3.23751,-1.654713 -3.24437,-5.400599 -0.006,-3.745885 -0.13309,-3.533584 3.22461,-5.412263 1.67885,-0.9393392 2.45517,-1.4092282 3.23201,-1.4105542 z" transform="matrix(0.82933656,0,0,0.80530515,-82.645364,-1.7181152)" />
+                    </svg>
+                  ) : (
+                    <span className={`text-3xl mr-3 ${key === 'Douyin' ? 'text-[#FE2C55]' : ''}`}>{platform.icon}</span>
+                  )}
                   <div>
                     <h4 className="text-lg font-semibold text-textLight-100">{platform.name}</h4>
                     <p className="text-sm text-textLight-300">
@@ -344,8 +363,8 @@ export default function AggregationPage() {
                   </div>
                 </div>
 
-                {/* 添加按钮 (TFTimes 除外) */}
-                {key !== 'TFTimes' && (
+                {/* 添加按钮 (TFTimes 和 TFTips 除外) */}
+                {key !== 'TFTimes' && key !== 'TFTips' && (
                   <button
                     onClick={() => {
                       setSelectedPlatformForAdd(platformKey);
@@ -423,11 +442,18 @@ export default function AggregationPage() {
                               </p>
                             </div>
                           )}
+                          {source.platform === 'TFTips' && (
+                            <div className="mt-2">
+                              <p className="text-xs text-textLight-200">
+                                固定数据源
+                              </p>
+                            </div>
+                          )}
                         </div>
 
                         {/* 操作按钮 */}
                         <div className="ml-3 flex-shrink-0">
-                          {source.platform !== 'TFTimes' ? (
+                          {source.platform !== 'TFTimes' && source.platform !== 'TFTips' ? (
                             <button
                               onClick={() => handleDelete(source._id, source.name, source.platform)}
                               className="text-red-400 hover:text-red-300 text-sm font-medium"
@@ -480,59 +506,98 @@ function AddSourceModal({
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [formData, setFormData] = useState<any>({
-    name: '',
-    // YouTube
-    youtubeType: 'user',
-    youtubeId: '',
-    youtubeFans: '',
-    youtubeDescription: '',
-    // Bilibili
-    bilibiliUid: '',
-    bibiliFans: '',
-    // Douyin
-    douyinUserId: '',
-    douyinFans: '',
-    douyinDescription: '',
-    // Tacter
-    tacterUsername: '',
-    tacterDescription: '',
-  });
+  // ID 输入字段
+  const [idInput, setIdInput] = useState('');
+  const [youtubeType, setYoutubeType] = useState<'user' | 'channel'>('user');
+
+  // 自动获取的用户信息
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [fetching, setFetching] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // 获取用户信息
+  const handleFetchInfo = async () => {
+    if (!idInput.trim()) {
+      alert('请输入 ID');
+      return;
+    }
+
+    setFetching(true);
+
+    try {
+      let requestBody: any = { platform };
+
+      // 构建请求体
+      if (platform === 'Bilibili') {
+        requestBody.bilibili = { uid: idInput };
+      } else if (platform === 'Douyin') {
+        requestBody.douyin = { userId: idInput };
+      } else if (platform === 'YouTube') {
+        requestBody.youtube = { id: idInput, type: youtubeType };
+      } else if (platform === 'Tacter') {
+        requestBody.tacter = { username: idInput };
+      }
+
+      const res = await fetch('/api/sources/fetch-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      });
+
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        setUserInfo(data.data);
+      } else {
+        alert(`获取用户信息失败: ${data.message}`);
+      }
+    } catch (error: any) {
+      alert(`获取用户信息失败: ${error.message}`);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  // 提交添加数据源
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!userInfo) {
+      alert('请先获取用户信息');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       let payload: any = {
         platform,
-        name: formData.name,
+        name: userInfo.name,
       };
 
       // 构建平台特定数据
-      if (platform === 'YouTube') {
-        payload.youtube = {
-          type: formData.youtubeType,
-          id: formData.youtubeId,
-          fans: formData.youtubeFans,
-          description: formData.youtubeDescription,
-        };
-      } else if (platform === 'Bilibili') {
+      if (platform === 'Bilibili') {
         payload.bilibili = {
-          uid: formData.bilibiliUid,
-          fans: formData.bibiliFans,
+          uid: idInput,
+          fans: userInfo.fans,
         };
       } else if (platform === 'Douyin') {
         payload.douyin = {
-          userId: formData.douyinUserId,
-          fans: formData.douyinFans,
-          description: formData.douyinDescription,
+          userId: idInput,
+          fans: userInfo.fans,
+          description: userInfo.description,
+        };
+      } else if (platform === 'YouTube') {
+        payload.youtube = {
+          type: youtubeType,
+          id: idInput,
+          fans: userInfo.fans,
+          description: userInfo.description,
         };
       } else if (platform === 'Tacter') {
         payload.tacter = {
-          username: formData.tacterUsername,
-          description: formData.tacterDescription,
+          username: idInput,
+          description: userInfo.description,
         };
       }
 
@@ -562,6 +627,16 @@ function AddSourceModal({
                         platform === 'Douyin' ? '抖音账号' :
                         platform === 'Tacter' ? 'Tacter 作者' : platform;
 
+  const idLabel = platform === 'Bilibili' ? 'UP主 UID' :
+                  platform === 'Douyin' ? '用户 ID (sec_user_id)' :
+                  platform === 'YouTube' ? '频道 ID' :
+                  platform === 'Tacter' ? '用户名' : 'ID';
+
+  const idPlaceholder = platform === 'Bilibili' ? '如 18343134' :
+                        platform === 'Douyin' ? '如 MS4wLjABAAAA...' :
+                        platform === 'YouTube' ? '如 @RerollTFT' :
+                        platform === 'Tacter' ? '如 tftips' : '';
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-bgDark-700 rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto border border-border">
@@ -570,204 +645,102 @@ function AddSourceModal({
         </h3>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 通用字段：名称 */}
+          {/* YouTube 频道类型选择 */}
+          {platform === 'YouTube' && (
+            <div>
+              <label className="block text-sm font-medium text-textLight-200 mb-1">
+                频道类型
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="user"
+                    checked={youtubeType === 'user'}
+                    onChange={() => setYoutubeType('user')}
+                    className="mr-2"
+                    disabled={!!userInfo}
+                  />
+                  <span className="text-sm text-textLight-200">User</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    value="channel"
+                    checked={youtubeType === 'channel'}
+                    onChange={() => setYoutubeType('channel')}
+                    className="mr-2"
+                    disabled={!!userInfo}
+                  />
+                  <span className="text-sm text-textLight-200">Channel</span>
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* ID 输入 */}
           <div>
             <label className="block text-sm font-medium text-textLight-200 mb-1">
-              名称 *
+              {idLabel} *
             </label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="显示名称"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={idInput}
+                onChange={(e) => setIdInput(e.target.value)}
+                required
+                disabled={!!userInfo}
+                className="flex-1 px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent disabled:opacity-50"
+                placeholder={idPlaceholder}
+              />
+              <button
+                type="button"
+                onClick={handleFetchInfo}
+                disabled={fetching || !!userInfo}
+                className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 transition-colors whitespace-nowrap"
+              >
+                {fetching ? '获取中...' : userInfo ? '✓ 已获取' : '获取信息'}
+              </button>
+            </div>
+            {platform === 'Douyin' && (
+              <p className="mt-1 text-xs text-textLight-300">
+                从抖音主页 URL 中获取用户 ID (sec_user_id)
+              </p>
+            )}
           </div>
 
-          {/* YouTube 特定字段 */}
-          {platform === 'YouTube' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  频道类型 *
-                </label>
-                <div className="flex gap-4">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="user"
-                      checked={formData.youtubeType === 'user'}
-                      onChange={(e) => setFormData({ ...formData, youtubeType: 'user' })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-textLight-200">User</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      value="channel"
-                      checked={formData.youtubeType === 'channel'}
-                      onChange={(e) => setFormData({ ...formData, youtubeType: 'channel' })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm text-textLight-200">Channel</span>
-                  </label>
+          {/* 显示获取到的用户信息 */}
+          {userInfo && (
+            <div className="bg-primary-500/10 border border-primary-500/30 rounded-lg p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-primary-400">获取到的用户信息</h4>
+                <button
+                  type="button"
+                  onClick={() => setUserInfo(null)}
+                  className="text-xs text-textLight-300 hover:text-textLight-100"
+                >
+                  重新获取
+                </button>
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="flex">
+                  <span className="text-textLight-300 w-20">名称:</span>
+                  <span className="text-textLight-100 font-medium">{userInfo.name}</span>
                 </div>
+                {userInfo.fans && (
+                  <div className="flex">
+                    <span className="text-textLight-300 w-20">粉丝数:</span>
+                    <span className="text-textLight-100">{userInfo.fans}</span>
+                  </div>
+                )}
+                {userInfo.description && (
+                  <div className="flex">
+                    <span className="text-textLight-300 w-20">描述:</span>
+                    <span className="text-textLight-100 text-xs line-clamp-2">{userInfo.description}</span>
+                  </div>
+                )}
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  频道 ID *
-                </label>
-                <input
-                  type="text"
-                  value={formData.youtubeId}
-                  onChange={(e) => setFormData({ ...formData, youtubeId: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="如 @RerollTFT"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  粉丝数
-                </label>
-                <input
-                  type="text"
-                  value={formData.youtubeFans}
-                  onChange={(e) => setFormData({ ...formData, youtubeFans: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="如 120万+"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  描述
-                </label>
-                <textarea
-                  value={formData.youtubeDescription}
-                  onChange={(e) => setFormData({ ...formData, youtubeDescription: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="频道描述"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Bilibili 特定字段 */}
-          {platform === 'Bilibili' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  UP主 UID *
-                </label>
-                <input
-                  type="text"
-                  value={formData.bilibiliUid}
-                  onChange={(e) => setFormData({ ...formData, bilibiliUid: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="如 18343134"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  粉丝数
-                </label>
-                <input
-                  type="text"
-                  value={formData.bibiliFans}
-                  onChange={(e) => setFormData({ ...formData, bibiliFans: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="如 186万"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Douyin 特定字段 */}
-          {platform === 'Douyin' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  抖音用户 ID *
-                </label>
-                <input
-                  type="text"
-                  value={formData.douyinUserId}
-                  onChange={(e) => setFormData({ ...formData, douyinUserId: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="如 MS4wLjABAAAA..."
-                />
-                <p className="mt-1 text-xs text-textLight-300">
-                  从抖音主页 URL 中获取用户 ID
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  粉丝数
-                </label>
-                <input
-                  type="text"
-                  value={formData.douyinFans}
-                  onChange={(e) => setFormData({ ...formData, douyinFans: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="如 50万"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  描述
-                </label>
-                <textarea
-                  value={formData.douyinDescription}
-                  onChange={(e) => setFormData({ ...formData, douyinDescription: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="账号描述"
-                />
-              </div>
-            </>
-          )}
-
-          {/* Tacter 特定字段 */}
-          {platform === 'Tacter' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  用户名 *
-                </label>
-                <input
-                  type="text"
-                  value={formData.tacterUsername}
-                  onChange={(e) => setFormData({ ...formData, tacterUsername: e.target.value })}
-                  required
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="如 tftips"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-textLight-200 mb-1">
-                  描述
-                </label>
-                <textarea
-                  value={formData.tacterDescription}
-                  onChange={(e) => setFormData({ ...formData, tacterDescription: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-bgDark-600 text-textLight-100 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  rows={3}
-                  placeholder="作者描述"
-                />
-              </div>
-            </>
+            </div>
           )}
 
           {/* 按钮 */}

@@ -15,7 +15,16 @@ export interface IAdmin {
   updatedAt: Date;
 }
 
-const AdminSchema = new mongoose.Schema<IAdmin>(
+// 扩展 Mongoose 文档类型，添加方法
+export interface IAdminMethods {
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
+
+export type AdminDocument = mongoose.Document<unknown, {}, IAdmin> &
+  IAdmin &
+  IAdminMethods;
+
+const AdminSchema = new mongoose.Schema<IAdmin, mongoose.Model<IAdmin, {}, IAdminMethods>, IAdminMethods>(
   {
     email: {
       type: String,
@@ -62,20 +71,23 @@ AdminSchema.pre('save', async function (next) {
 });
 
 // 密码验证方法
-AdminSchema.methods.comparePassword = async function (
+AdminSchema.methods.comparePassword = function (
   candidatePassword: string
 ): Promise<boolean> {
-  return await bcrypt.compare(candidatePassword, this.password);
+  if (!this.password) {
+    return Promise.resolve(false);
+  }
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 // 安全地导出模型，避免 mongoose.models 为 undefined 的问题
-let Admin;
+let Admin: mongoose.Model<IAdmin, {}, IAdminMethods>;
 try {
   // 尝试获取已存在的模型
-  Admin = mongoose.model<IAdmin>('Admin');
+  Admin = mongoose.model<IAdmin, mongoose.Model<IAdmin, {}, IAdminMethods>>('Admin');
 } catch {
   // 如果模型不存在，创建新模型
-  Admin = mongoose.model<IAdmin>('Admin', AdminSchema);
+  Admin = mongoose.model<IAdmin, mongoose.Model<IAdmin, {}, IAdminMethods>>('Admin', AdminSchema);
 }
 
 export default Admin;
