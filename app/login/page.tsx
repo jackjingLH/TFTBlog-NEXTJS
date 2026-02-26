@@ -50,7 +50,7 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <Link href="/" className="text-3xl font-bold text-textLight-100">
-            TFT Blog
+            铲什么铲
           </Link>
           <h2 className="mt-6 text-2xl font-semibold text-textLight-200">
             管理员登录

@@ -77,12 +77,10 @@ async function fetchHTML(url) {
 }
 
 // ============================================================
-// 页面更新时间提取
+// 从 HTML 片段中提取 "Updated: YYYY.M.D" 格式的时间
+// 兼容 React hydration 注释：Updated: <!-- -->2026.2.25
 // ============================================================
 function extractUpdateTime(html) {
-  // 提取 "Updated: 2026.2.25" 格式的时间
-  // 需要处理 React hydration 注释：Updated: <!-- -->2026.2.25
-  // 匹配模式：Updated: 后面可能有空格、注释，然后是日期
   const updateMatch = html.match(/Updated:\s*(?:<!--\s*-->)?\s*(\d{4})\.(\d{1,2})\.(\d{1,2})/);
 
   if (!updateMatch) {
@@ -94,14 +92,13 @@ function extractUpdateTime(html) {
   const day = parseInt(updateMatch[3]);
 
   // 设置为当天 UTC 0点（避免时区问题）
-  const date = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
-  return date;
+  return new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
 }
 
 // ============================================================
 // HTML 解析函数 - 提取阵容
 // ============================================================
-function parseComps(html, pageUpdateTime) {
+function parseComps(html) {
   const comps = [];
 
   // 按 section 分段（每个 tier 一个 section）
@@ -141,23 +138,27 @@ function parseComps(html, pageUpdateTime) {
         const slug = slugMatch[1];
         const id = `TFTips-${slug}`;
 
-        // 提取封面图
+        // 提取封面图（将 sm 替换为 md，使用桌面版大图）
         const imgMatch = cardHTML.match(/<img[^>]+src="([^"]+)"/);
-        const thumbnail = imgMatch ? imgMatch[1] : '';
+        const thumbnail = imgMatch ? imgMatch[1].replace('/champ/sm/', '/champ/md/') : '';
 
         // 构建完整链接
         const link = href.startsWith('http') ? href : `${CONFIG.BASE_URL}${href}`;
 
+        // 提取该阵容自身的更新时间（位于卡片桌面版底部）
+        // 格式：<div ...>Updated: 2026.2.2</div>
+        const publishedAt = extractUpdateTime(cardHTML);
+
         comps.push({
           id,
           title,
-          description: 'TFTips 阵容推荐',
+          description: extractTags(cardHTML),
           link,
           thumbnail,
           platform: CONFIG.PLATFORM,
           author: CONFIG.AUTHOR,
           category: tier,
-          publishedAt: pageUpdateTime,  // 使用页面更新时间
+          publishedAt,   // 每个阵容独立的更新时间，未找到时为 null
           fetchedAt: new Date(),
         });
       } catch (error) {
@@ -167,6 +168,23 @@ function parseComps(html, pageUpdateTime) {
   }
 
   return comps;
+}
+
+// ============================================================
+// 提取卡片标签（リロールLv6 / 初心者にオススメ 等）
+// 跳过含 SVG 的「ガイド」徽章，并对移动/桌面重复标签去重
+// ============================================================
+function extractTags(cardHTML) {
+  // inline-flex 是策略标签的特征，ガイド 徽章用的是 flex（非 inline-flex）
+  const tagRegex = /<div class="inline-flex[^"]*rounded-full border[^"]*"[^>]*>\s*([^<]+?)\s*<\/div>/g;
+  const seen = new Set();
+
+  for (const match of cardHTML.matchAll(tagRegex)) {
+    const tag = match[1].trim();
+    if (tag) seen.add(tag);
+  }
+
+  return seen.size > 0 ? [...seen].join(' / ') : 'TFTips 阵容推荐';
 }
 
 // ============================================================
@@ -305,33 +323,9 @@ async function main() {
     console.log('📥 抓取页面...');
     const html = await fetchHTML(CONFIG.COMPS_URL);
 
-    // 3. 提取页面更新时间
-    const pageUpdateTime = extractUpdateTime(html);
-    if (!pageUpdateTime) {
-      console.warn('⚠️  未找到页面更新时间，使用当前时间');
-    }
-    const updateTime = pageUpdateTime || new Date();
-
-    // 4. 对比上次更新时间
-    const lastUpdateTime = source.tftips?.lastUpdateTime;
-
-    if (lastUpdateTime) {
-      const lastTime = new Date(lastUpdateTime);
-      if (updateTime.getTime() === lastTime.getTime()) {
-        console.log('✅ 页面无更新，跳过抓取');
-        console.log(`   上次更新: ${formatDate(lastTime)}`);
-        console.log(`   页面更新: ${formatDate(updateTime)}`);
-        return { success: true, skipped: true };
-      }
-    }
-
-    console.log('🔄 检测到页面更新，开始同步...');
-    console.log(`   上次更新: ${lastUpdateTime ? formatDate(lastUpdateTime) : '首次抓取'}`);
-    console.log(`   页面更新: ${formatDate(updateTime)}`);
-
-    // 5. 解析阵容
+    // 3. 解析阵容（每个阵容自带独立更新时间）
     console.log('🔍 解析阵容...');
-    const comps = parseComps(html, updateTime);
+    const comps = parseComps(html);
 
     if (comps.length === 0) {
       console.error('⚠️  警告：未解析到任何阵容，可能是页面结构变化');
@@ -341,10 +335,40 @@ async function main() {
 
     console.log(`📊 解析成功: ${comps.length} 个阵容`);
 
+    // 4. 从所有阵容中取最新的更新时间，作为「有效页面更新时间」
+    // 任何一个阵容有更新，都会触发同步
+    const latestCompTime = comps.reduce((max, comp) => {
+      if (!comp.publishedAt) return max;
+      if (!max || comp.publishedAt > max) return comp.publishedAt;
+      return max;
+    }, null);
+    const updateTime = latestCompTime || new Date();
+
+    if (!latestCompTime) {
+      console.warn('⚠️  所有阵容均未找到更新时间，使用当前时间');
+    }
+
+    // 5. 对比上次更新时间
+    const lastUpdateTime = source.tftips?.lastUpdateTime;
+
+    if (lastUpdateTime) {
+      const lastTime = new Date(lastUpdateTime);
+      if (updateTime.getTime() === lastTime.getTime()) {
+        console.log('✅ 页面无更新，跳过抓取');
+        console.log(`   上次更新: ${formatDate(lastTime)}`);
+        console.log(`   最新阵容: ${formatDate(updateTime)}`);
+        return { success: true, skipped: true };
+      }
+    }
+
+    console.log('🔄 检测到页面更新，开始同步...');
+    console.log(`   上次更新: ${lastUpdateTime ? formatDate(lastUpdateTime) : '首次抓取'}`);
+    console.log(`   最新阵容: ${formatDate(updateTime)}`);
+
     // 6. 同步到数据库
     const stats = await syncToDatabase(comps, db);
 
-    // 7. 更新 Source 的 lastUpdateTime
+    // 7. 更新 Source 的 lastUpdateTime（存储最新阵容时间）
     await sourcesCollection.updateOne(
       { platform: CONFIG.PLATFORM },
       {

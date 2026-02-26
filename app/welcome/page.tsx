@@ -27,7 +27,7 @@ export default async function WelcomePage() {
               欢迎，{session.user.name}！
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              你已成功登录 TFT Blog
+              你已成功登录 铲什么铲
             </p>
           </div>
 

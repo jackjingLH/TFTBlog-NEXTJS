@@ -11,7 +11,7 @@ export default async function Navbar() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link href="/" className="text-xl font-bold text-textLight-100">
-              TFT Blog
+              铲什么铲
             </Link>
           </div>
 

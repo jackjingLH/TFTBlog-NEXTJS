@@ -16,9 +16,9 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "TFT Blog - 技术文章聚合",
-  description: "聚合各大技术博客的优质文章",
-  referrer: "no-referrer", // 禁止发送 Referer，解决B站图片防盗链问题
+  title: "铲什么铲 - 云顶之弈/金铲铲全网攻略聚合",
+  description: "汇聚 TFT Times、TFTips、哔哩哔哩、抖音、YouTube、Tacter 等平台最新阵容攻略与版本资讯",
+  referrer: "no-referrer",
 };
 
 export default function RootLayout({
