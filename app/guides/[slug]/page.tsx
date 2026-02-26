@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
@@ -11,6 +12,31 @@ export async function generateStaticParams() {
   return guides.map((guide) => ({
     slug: guide.slug,
   }));
+}
+
+// 生成每篇攻略的独立 SEO 元数据
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const guide = getGuideBySlug(params.slug);
+  if (!guide) return {};
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://47.99.202.3';
+  const description = guide.description || `${guide.title} - 云顶之弈攻略`;
+
+  return {
+    title: guide.title,
+    description,
+    keywords: [...(guide.tags || []), '云顶之弈', '金铲铲之战', 'TFT攻略'],
+    openGraph: {
+      title: guide.title,
+      description,
+      url: `${baseUrl}/guides/${params.slug}`,
+      type: 'article',
+      ...(guide.cover ? { images: [`${baseUrl}/guides/${params.slug}/${guide.cover}`] } : {}),
+    },
+    alternates: {
+      canonical: `${baseUrl}/guides/${params.slug}`,
+    },
+  };
 }
 
 export default function GuidePage({ params }: { params: { slug: string } }) {
