@@ -37,6 +37,7 @@ export const metadata: Metadata = {
   },
   other: {
     "baidu-site-verification": "codeva-J66JdBDwXf",
+    "google-site-verification": "XY1qt7sCDWOuTZ1MUmAf0YCi9fkJD6AW6v_FVv2OJGQ",
   },
 };
 

@@ -51,3 +51,9 @@ logs/
 scripts/secure-mongodb*.sh
 scripts/restore-database.*
 scripts/*-restore-data.js
+
+# docker files with credentials
+docker-compose.rsshub.yml
+
+# local PM2 config (contains credentials)
+ecosystem.local.js
