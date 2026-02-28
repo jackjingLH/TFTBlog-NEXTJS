@@ -1,33 +1,50 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    // 禁用可能导致 worker 问题的实验性功能
-    serverComponentsExternalPackages: [],
-  },
-  // 确保 worker 配置正确
+  // react-markdown@10, remark-gfm@4, rehype-raw@7 及其传递依赖均为纯 ESM 包
+  // transpilePackages 让 Next.js 的 SWC 将它们转换为 CJS 再打包，避免 webpack worker 崩溃
+  transpilePackages: [
+    'react-markdown',
+    'unified',
+    'bail',
+    'is-plain-obj',
+    'trough',
+    'vfile',
+    'vfile-message',
+    'remark-gfm',
+    'rehype-raw',
+    'rehype-sanitize',
+    'remark-parse',
+    'remark-rehype',
+    'hast-util-to-jsx-runtime',
+    'hast-util-whitespace',
+    'property-information',
+    'space-separated-tokens',
+    'comma-separated-tokens',
+    'unist-util-position',
+    'unist-util-stringify-position',
+    'micromark',
+    'mdast-util-from-markdown',
+    'mdast-util-to-string',
+  ],
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
-      // 客户端构建时的优化
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
       };
     }
 
-    // 开发环境优化文件监视器，避免进程重启和端口递增问题
     if (dev) {
       config.watchOptions = {
-        poll: 1000, // 每秒轮询一次文件变化，比事件监听更稳定
-        aggregateTimeout: 300, // 文件变化后等待300ms再重新构建，避免频繁编译
-        ignored: ['**/node_modules', '**/.git', '**/.next'], // 忽略不需要监视的目录
+        poll: 1000,
+        aggregateTimeout: 300,
+        ignored: ['**/node_modules', '**/.git', '**/.next'],
       };
     }
 
     return config;
   },
-  // 设置并发工作进程数量
   swcMinify: true,
-  // 优化构建性能
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },

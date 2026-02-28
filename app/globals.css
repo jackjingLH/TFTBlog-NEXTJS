@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  --background: #0f1419;
+  --background: #0F0F23;
   --foreground: #ffffff;
 }
 
@@ -19,27 +19,148 @@ body {
   }
 }
 
-/* 自定义滚动条样式 */
+/* ──────────────────────────────────────────────
+   Cyberpunk utility classes
+   ────────────────────────────────────────────── */
+
+/* Neon glow - 紫色光晕 */
+.neon-glow {
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.4), 0 0 40px rgba(124, 58, 237, 0.15);
+}
+.neon-glow:hover,
+.neon-glow-hover:hover {
+  box-shadow: 0 0 25px rgba(124, 58, 237, 0.7), 0 0 50px rgba(124, 58, 237, 0.3);
+}
+
+/* Glassmorphism 卡片 */
+.glass-card {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* 渐变边框（紫→玫红）*/
+.neon-border {
+  position: relative;
+  background: linear-gradient(135deg, #7C3AED, #F43F5E);
+  padding: 1px;
+  border-radius: 0.75rem;
+}
+.neon-border > * {
+  border-radius: calc(0.75rem - 1px);
+  background: #16213E;
+}
+
+/* 扫描线背景纹理 */
+.scanline::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 1px,
+    rgba(255, 255, 255, 0.015) 1px,
+    rgba(255, 255, 255, 0.015) 2px
+  );
+}
+
+/* 关于页 - 小红书卡片 hover neon glow（Server Component 不能用 JS 事件，改用 CSS） */
+.xhs-card {
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.15);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+.xhs-card:hover {
+  border-color: rgba(124, 58, 237, 0.8);
+  box-shadow: 0 0 35px rgba(124, 58, 237, 0.4), 0 0 60px rgba(124, 58, 237, 0.15);
+}
+
+/* ──────────────────────────────────────────────
+   Scrollbar styles (purple theme)
+   ────────────────────────────────────────────── */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(30, 35, 48, 0.3);
+  background: rgba(22, 33, 62, 0.3);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #FF8500 0%, #FF6B00 100%);
+  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #FFA500 0%, #FF8500 100%);
+  background: linear-gradient(135deg, #A78BFA 0%, #7C3AED 100%);
 }
 
 /* Firefox 滚动条 */
 .custom-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: #FF8500 rgba(30, 35, 48, 0.3);
+  scrollbar-color: #7C3AED rgba(22, 33, 62, 0.3);
+}
+
+/* ──────────────────────────────────────────────
+   Animation utilities
+   ────────────────────────────────────────────── */
+
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.drawer-enter {
+  animation: slideInLeft 0.25s ease-out;
+}
+
+.backdrop-enter {
+  animation: fadeIn 0.2s ease-out;
+}
+
+.reading-progress {
+  transition: width 0.1s linear;
+}
+
+/* CTA 按钮 hover 效果（Server Component 不能用 onMouseEnter，改用 CSS） */
+.cta-rose-btn {
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.45), 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.cta-rose-btn:hover {
+  box-shadow: 0 0 32px rgba(244, 63, 94, 0.7), 0 4px 16px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+/* 攻略页 上一篇/下一篇 导航卡片 hover */
+.guide-nav-card {
+  border: 1px solid rgba(55, 48, 163, 0.4);
+  background: rgba(22, 33, 62, 0.6);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.guide-nav-card:hover {
+  border-color: rgba(124, 58, 237, 0.7);
+  box-shadow: 0 0 16px rgba(124, 58, 237, 0.2);
+}
+
+/* 关于页 平台卡片 hover */
+.platform-card {
+  background: rgba(15, 15, 35, 0.6);
+  transition: box-shadow 0.2s ease, background 0.2s ease;
 }
