@@ -2,9 +2,12 @@
  * TFT Times 数据抓取脚本
  *
  * 功能：
- * - 抓取 TFT Times 官网最新文章（メタ＆攻略、パッチノート、ニュース）
+ * - 通过 api.tftimes.info JSON API 获取最新文章
  * - 直接保存到 MongoDB 数据库
  * - 自动去重（基于文章 ID）
+ *
+ * 背景：TFTimes 网站于 2026年初 从 WordPress 重构为 React SPA，
+ * 旧的 HTML 爬取方式（entry-card）已失效，改用官方 API。
  *
  * 使用方法：
  *   node scripts/fetch-tftimes.js
@@ -22,41 +25,41 @@ const CONFIG = {
   // MongoDB 配置
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://47.99.202.3:27017/tftblog',
 
-  // TFT Times 配置
-  BASE_URL: 'https://www.tftimes.jp',
-  ARTICLE_LIMIT: 5,  // 抓取最新的 5 篇文章
+  // TFT Times API 配置
+  SITE_URL: 'https://www.tftimes.jp',
+  API_URL: 'https://api.tftimes.info',
+  ARTICLE_LIMIT: 5,
 
   // 请求超时
   REQUEST_TIMEOUT: 30000,
 };
 
 // ============================================================
-// HTTP 请求辅助函数
+// HTTP 请求辅助函数（JSON API）
 // ============================================================
-async function fetchHTML(url) {
+async function fetchJSON(url) {
   const https = require('https');
 
   return new Promise((resolve, reject) => {
     const req = https.request(url, {
       method: 'GET',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'ja,en-US;q=0.7,en;q=0.3',
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; TFTBlog/1.0)',
       },
       timeout: CONFIG.REQUEST_TIMEOUT,
     }, (res) => {
       let data = '';
-
-      res.on('data', chunk => {
-        data += chunk;
-      });
-
+      res.on('data', chunk => { data += chunk; });
       res.on('end', () => {
         if (res.statusCode === 200) {
-          resolve(data);
+          try {
+            resolve(JSON.parse(data));
+          } catch (e) {
+            reject(new Error('JSON 解析失败: ' + e.message));
+          }
         } else {
-          reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
+          reject(new Error(`HTTP ${res.statusCode}`));
         }
       });
     });
@@ -66,162 +69,39 @@ async function fetchHTML(url) {
       req.destroy();
       reject(new Error('请求超时'));
     });
-
     req.end();
   });
 }
 
 // ============================================================
-// HTML 解析函数
+// 文章解析函数（从 API 响应）
 // ============================================================
-function parseArticles(html) {
-  const articles = [];
+function parseArticles(apiResponse) {
+  const items = (apiResponse.items || []).filter(item => item.status === 'published');
 
-  // 查找文章列表 - 使用 entry-card 类的 article 标签
-  const articlePattern = /<article[^>]*class="[^"]*entry-card[^"]*"[^>]*>[\s\S]*?<\/article>/gs;
-  const matches = html.match(articlePattern);
-
-  if (!matches) {
-    return articles;
-  }
-
-  for (let i = 0; i < matches.length && i < CONFIG.ARTICLE_LIMIT; i++) {
-    const articleHTML = matches[i];
-
-    try {
-      // 提取标题
-      const titleMatch = articleHTML.match(/<h2[^>]*class="[^"]*entry-card-title[^"]*"[^>]* itemprop="headline">(.*?)<\/h2>/s);
-      if (!titleMatch) {
-        continue;
-      }
-
-      const title = cleanText(titleMatch[1]);
-
-      // 提取描述
-      let description = '';
-      const descMatch = articleHTML.match(/<div[^>]*class="[^"]*entry-card-snippet[^"]*"[^>]*>(.*?)<\/div>/s);
-      if (descMatch) {
-        description = cleanText(descMatch[1]);
-      }
-
-      // 提取文章 ID
-      const idMatch = articleHTML.match(/id="post-(\d+)"/);
-      const postId = idMatch ? idMatch[1] : '';
-
-      if (!postId) {
-        console.log(`[TFTimes] 文章 ${i} 缺少 ID，跳过`);
-        continue;
-      }
-
-      // 构建链接
-      const link = `${CONFIG.BASE_URL}/?p=${postId}`;
-      const id = `tftimes-${postId}`;
-
-      // 提取日期
-      let publishedAt = new Date();
-      const dateMatch = articleHTML.match(/<span[^>]*class="[^"]*entry-date[^"]*"[^>]*>(.*?)<\/span>/s);
-      if (dateMatch) {
-        const dateStr = dateMatch[1].trim();
-        // 解析 YYYY.MM.DD 格式
-        const dateParts = dateStr.split('.');
-        if (dateParts.length === 3) {
-          const year = parseInt(dateParts[0]);
-          const month = parseInt(dateParts[1]) - 1;
-          const day = parseInt(dateParts[2]);
-          publishedAt = new Date(year, month, day);
-        }
-      }
-
-      // 提取缩略图 - 尝试多种模式
-      let thumbnail = '';
-
-      // 模式1: <img> 标签的 src
-      const imgSrcMatch = articleHTML.match(/<img[^>]*src=["']([^"']+)["']/);
-      if (imgSrcMatch) {
-        thumbnail = imgSrcMatch[1];
-      }
-
-      // 模式2: data-src (懒加载)
-      if (!thumbnail) {
-        const dataSrcMatch = articleHTML.match(/<img[^>]*data-src=["']([^"']+)["']/);
-        if (dataSrcMatch) {
-          thumbnail = dataSrcMatch[1];
-        }
-      }
-
-      // 模式3: style 背景图
-      if (!thumbnail) {
-        const bgMatch = articleHTML.match(/background-image:\s*url\(['"]?([^'"()]+)['"]?\)/);
-        if (bgMatch) {
-          thumbnail = bgMatch[1];
-        }
-      }
-
-      // 如果是相对路径，转换为绝对路径
-      if (thumbnail && !thumbnail.startsWith('http')) {
-        thumbnail = `${CONFIG.BASE_URL}${thumbnail.startsWith('/') ? '' : '/'}${thumbnail}`;
-      }
-
-      // 尝试提取分类（多种可能的类名）
-      let category = '综合';
-
-      // 尝试不同的分类选择器
-      const categoryPatterns = [
-        /<span[^>]*class="[^"]*cat-name[^"]*"[^>]*>(.*?)<\/span>/s,
-        /<a[^>]*class="[^"]*cat-link[^"]*"[^>]*>(.*?)<\/a>/s,
-        /<span[^>]*class="[^"]*category[^"]*"[^>]*>(.*?)<\/span>/s,
-      ];
-
-      for (const pattern of categoryPatterns) {
-        const match = articleHTML.match(pattern);
-        if (match) {
-          category = cleanText(match[1]);
-          break;
-        }
-      }
-
-      // 根据分类设置 author，与 sources 集合保持一致
-      let author = 'TFT Times - ニュース';  // 默认分类
-      if (category.includes('メタ') || category.includes('攻略')) {
-        author = 'TFT Times - メタ＆攻略';
-      } else if (category.includes('パッチ')) {
-        author = 'TFT Times - パッチノート';
-      }
-
-      articles.push({
-        id,
-        title,
-        description,
-        link,
-        thumbnail,
-        platform: 'TFTimes',
-        author,  // 修复：使用分类对应的 author，与 sources 集合保持一致
-        category,
-        publishedAt,
-        fetchedAt: new Date(),
-      });
-    } catch (error) {
-      console.error(`[TFTimes] 解析文章 ${i} 失败:`, error.message);
+  return items.slice(0, CONFIG.ARTICLE_LIMIT).map(item => {
+    // 根据分类推断 author（与 sources 集合保持一致）
+    const category = item.category || '';
+    let author = 'TFT Times - ニュース';
+    if (category.includes('メタ') || category.includes('攻略')) {
+      author = 'TFT Times - メタ＆攻略';
+    } else if (category.includes('パッチ')) {
+      author = 'TFT Times - パッチノート';
     }
-  }
 
-  return articles;
-}
-
-// ============================================================
-// 文本清理函数
-// ============================================================
-function cleanText(text) {
-  return text
-    .replace(/<[^>]*>/g, '') // 移除 HTML 标签
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
+    return {
+      id: `tftimes-${item.id}`,
+      title: item.title,
+      description: '',
+      link: `${CONFIG.SITE_URL}/articles/${item.slug}`,
+      thumbnail: item.coverImageUrl || '',
+      platform: 'TFTimes',
+      author,
+      category,
+      publishedAt: new Date(item.publishedAt),
+      fetchedAt: new Date(),
+    };
+  });
 }
 
 // ============================================================
@@ -246,9 +126,19 @@ async function saveToDatabase(articles) {
 
     for (const article of articles) {
       try {
+        // 清理相同标题的旧记录（不同 ID，防止 ID 格式变更导致重复）
+        const staleArticle = await collection.findOne({
+          title: article.title,
+          platform: 'TFTimes',
+          id: { $ne: article.id },
+        });
+        if (staleArticle) {
+          await collection.deleteOne({ _id: staleArticle._id });
+          console.log(`[TFTimes] 清理旧记录: ${staleArticle.id}`);
+        }
+
         const existingArticle = await collection.findOne({ id: article.id });
         const isNew = !existingArticle;
-
         await collection.updateOne(
           { id: article.id },
           { $set: article },
@@ -278,11 +168,11 @@ async function saveToDatabase(articles) {
 // 主函数
 // ============================================================
 async function main() {
-  console.log('🚀 TFT Times 数据抓取');
+  console.log('🚀 TFT Times 数据抓取（API 模式）');
 
   try {
-    const html = await fetchHTML(CONFIG.BASE_URL);
-    const articles = parseArticles(html);
+    const apiData = await fetchJSON(`${CONFIG.API_URL}/articles`);
+    const articles = parseArticles(apiData);
 
     console.log(`\n📊 成功抓取: ${articles.length} 篇文章`);
 

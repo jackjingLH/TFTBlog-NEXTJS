@@ -25,10 +25,14 @@ export interface GuideData extends GuideMetadata {
  * 获取所有攻略的slug列表
  */
 export function getAllGuideSlugs(): string[] {
-  const items = fs.readdirSync(guidesDirectory, { withFileTypes: true });
-  return items
-    .filter(item => item.isDirectory())
-    .map(item => item.name);
+  try {
+    const items = fs.readdirSync(guidesDirectory, { withFileTypes: true });
+    return items
+      .filter(item => item.isDirectory())
+      .map(item => item.name);
+  } catch {
+    return [];
+  }
 }
 
 /**
