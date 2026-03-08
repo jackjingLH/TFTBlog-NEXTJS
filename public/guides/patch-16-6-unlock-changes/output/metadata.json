@@ -1,0 +1,78 @@
+{
+  "mdFile": "D:\\code\\TFT\\TFT.md",
+  "outputDir": "D:\\code\\TFT\\output",
+  "fullImage": "D:\\code\\TFT\\output\\TFT_full.png",
+  "splitImages": [
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part1_of_10.png",
+      "filename": "TFT_part1_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 591.5
+    },
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part2_of_10.png",
+      "filename": "TFT_part2_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 118.1
+    },
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part3_of_10.png",
+      "filename": "TFT_part3_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 100.7
+    },
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part4_of_10.png",
+      "filename": "TFT_part4_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 118.4
+    },
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part5_of_10.png",
+      "filename": "TFT_part5_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 114.3
+    },
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part6_of_10.png",
+      "filename": "TFT_part6_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 117.3
+    },
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part7_of_10.png",
+      "filename": "TFT_part7_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 121.3
+    },
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part8_of_10.png",
+      "filename": "TFT_part8_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 108.7
+    },
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part9_of_10.png",
+      "filename": "TFT_part9_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 122.4
+    },
+    {
+      "path": "D:\\code\\TFT\\output\\TFT_part10_of_10.png",
+      "filename": "TFT_part10_of_10.png",
+      "width": 900,
+      "height": 1200,
+      "sizeKB": 27.6
+    }
+  ],
+  "timestamp": "2026-03-05T15:28:28.180Z"
+}

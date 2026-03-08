@@ -8,6 +8,7 @@ const navItems = [
   { href: '/dashboard/fetch', label: '数据抓取', icon: '🔄' },
   { href: '/dashboard/aggregation', label: '聚合管理', icon: '🌐' },
   { href: '/dashboard/guides', label: '攻略管理', icon: '📝' },
+  { href: '/dashboard/logs', label: '任务日志', icon: '📋' },
   { href: '/', label: '返回首页', icon: '🏠' },
 ];
 
