@@ -5,6 +5,14 @@ import path from 'path';
 import AdmZip from 'adm-zip';
 import { writeFile } from 'fs/promises';
 
+function getEntryParts(entryName: string) {
+  return entryName.replace(/\\/g, '/').split('/').filter(Boolean);
+}
+
+function getZipBaseName(fileName: string) {
+  return path.basename(fileName, path.extname(fileName)).trim();
+}
+
 /**
  * 上传攻略 ZIP
  * POST /api/guides/upload
@@ -52,29 +60,33 @@ export async function POST(request: NextRequest) {
       // 解压 ZIP 文件
       const zip = new AdmZip(tempPath);
       const zipEntries = zip.getEntries();
+      const fileEntries = zipEntries.filter((entry) => !entry.isDirectory);
 
-      // 查找根文件夹名称
+      if (fileEntries.length === 0) {
+        throw new Error('ZIP 文件为空');
+      }
+
+      const firstLevelNames = new Set(
+        fileEntries.map((entry) => getEntryParts(entry.entryName)[0]).filter(Boolean)
+      );
+      const hasRootLevelFiles = fileEntries.some(
+        (entry) => getEntryParts(entry.entryName).length === 1
+      );
+
       let rootFolder = '';
-      for (const entry of zipEntries) {
-        if (entry.isDirectory) {
-          const parts = entry.entryName.split('/').filter(Boolean);
-          if (parts.length === 1) {
-            rootFolder = parts[0];
-            break;
-          }
-        }
+      let stripRootFolder = false;
+
+      if (firstLevelNames.size === 1 && !hasRootLevelFiles) {
+        rootFolder = [...firstLevelNames][0];
+        stripRootFolder = true;
+      } else if (!hasRootLevelFiles && firstLevelNames.size > 1) {
+        throw new Error('ZIP 文件结构不正确，请将单篇攻略放在一个独立文件夹中后再压缩上传');
+      } else {
+        rootFolder = getZipBaseName(file.name);
       }
 
       if (!rootFolder) {
-        // 如果没有根文件夹，从第一个文件路径提取
-        const firstFile = zipEntries.find((e) => !e.isDirectory);
-        if (firstFile) {
-          rootFolder = firstFile.entryName.split('/')[0];
-        }
-      }
-
-      if (!rootFolder) {
-        throw new Error('ZIP 文件结构不正确，无法识别攻略文件夹');
+        throw new Error('ZIP 文件结构不正确，无法识别攻略目录名');
       }
 
       // 目标路径
@@ -92,8 +104,29 @@ export async function POST(request: NextRequest) {
         // 文件夹不存在，继续
       }
 
-      // 解压到 guides 目录
-      zip.extractAllTo(guidesPath, true);
+      await fs.mkdir(targetPath, { recursive: true });
+
+      for (const entry of fileEntries) {
+        const entryParts = getEntryParts(entry.entryName);
+        const relativeParts = stripRootFolder ? entryParts.slice(1) : entryParts;
+
+        if (relativeParts.length === 0) {
+          continue;
+        }
+
+        const destinationPath = path.resolve(targetPath, ...relativeParts);
+        const resolvedTargetPath = path.resolve(targetPath);
+
+        if (
+          destinationPath !== resolvedTargetPath &&
+          !destinationPath.startsWith(`${resolvedTargetPath}${path.sep}`)
+        ) {
+          throw new Error(`ZIP 文件包含非法路径: ${entry.entryName}`);
+        }
+
+        await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+        await fs.writeFile(destinationPath, entry.getData());
+      }
 
       return NextResponse.json({
         status: 'success',
