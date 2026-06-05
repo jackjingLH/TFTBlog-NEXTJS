@@ -1,153 +1,90 @@
-import GuidesList from './components/GuidesList';
-
 export default function Home() {
   return (
-    <main className="min-h-screen bg-bgDark-800 scanline">
-
-      {/* Hero 区域 */}
-      <div
-        className="relative border-b overflow-hidden"
-        style={{
-          borderColor: 'rgba(55, 48, 163, 0.5)',
-          background: `
-            radial-gradient(ellipse at 50% 0%, rgba(124,58,237,0.12) 0%, transparent 70%),
-            repeating-linear-gradient(
-              0deg,
-              transparent,
-              transparent 39px,
-              rgba(124,58,237,0.04) 39px,
-              rgba(124,58,237,0.04) 40px
-            ),
-            repeating-linear-gradient(
-              90deg,
-              transparent,
-              transparent 39px,
-              rgba(124,58,237,0.04) 39px,
-              rgba(124,58,237,0.04) 40px
-            )
-          `,
-        }}
-      >
-        {/* 背景装饰光晕球 */}
+    <main className="min-h-[calc(100vh-10rem)] overflow-hidden bg-bgDark-800">
+      <section className="relative isolate flex min-h-[calc(100vh-10rem)] items-center px-4 py-16 sm:px-6 lg:px-8">
         <div
-          className="absolute pointer-events-none"
+          className="absolute inset-0 -z-10 opacity-35"
           style={{
-            top: '-80px',
-            left: '-120px',
-            width: '400px',
-            height: '400px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(124,58,237,0.18) 0%, transparent 70%)',
-            filter: 'blur(40px)',
-            opacity: 0.6,
-          }}
-        />
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            top: '-60px',
-            right: '-100px',
-            width: '350px',
-            height: '350px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(244,63,94,0.15) 0%, transparent 70%)',
-            filter: 'blur(40px)',
-            opacity: 0.5,
+            backgroundImage:
+              'linear-gradient(rgba(167, 139, 250, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(167, 139, 250, 0.08) 1px, transparent 1px)',
+            backgroundSize: '44px 44px',
+            maskImage: 'linear-gradient(to bottom, transparent, black 12%, black 78%, transparent)',
           }}
         />
 
-        <div className="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-14 text-center">
+        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.08fr_0.92fr]">
+          <div className="max-w-2xl">
+            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-primary-400/35 bg-bgDark-700/60 px-3 py-1.5 text-sm text-primary-400">
+              <span className="h-2 w-2 rounded-full bg-accent-500 shadow-[0_0_14px_rgba(244,63,94,0.85)]" />
+              网站更新中
+            </div>
 
-          {/* 游戏名称并列 */}
-          <div className="flex items-center justify-center gap-4 mb-5">
-            <span
-              className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent"
-              style={{
-                backgroundImage: 'linear-gradient(135deg, #ffffff 0%, #A78BFA 100%)',
-                filter: 'drop-shadow(0 0 12px rgba(167,139,250,0.3))',
-              }}
-            >
-              云顶之弈
-            </span>
-            <span className="text-textLight-300 text-3xl font-light">/</span>
-            <span
-              className="text-4xl sm:text-5xl font-bold bg-clip-text text-transparent"
-              style={{
-                backgroundImage: 'linear-gradient(135deg, #ffffff 0%, #A78BFA 100%)',
-                filter: 'drop-shadow(0 0 12px rgba(167,139,250,0.3))',
-              }}
-            >
-              金铲铲之战
-            </span>
-          </div>
+            <h1 className="text-4xl font-bold leading-tight text-textLight-100 sm:text-6xl">
+              铲什么铲正在重建
+            </h1>
 
-          {/* 核心标语 */}
-          <p
-            className="font-semibold text-lg sm:text-xl tracking-wide mb-5"
-            style={{
-              color: '#F43F5E',
-              textShadow: '0 0 12px rgba(244,63,94,0.5)',
-            }}
-          >
-            全网攻略，一站直达
-          </p>
+            <p className="mt-6 max-w-xl text-base leading-8 text-textLight-200 sm:text-lg">
+              我们正在整理新版 TFT 攻略内容、页面结构和后台工具。正式上线后，这里会恢复阵容攻略、版本更新和内容管理能力。
+            </p>
 
-          {/* 数据统计徽章行 */}
-          <div className="flex items-center justify-center gap-3 flex-wrap mb-6">
-            {[
-              { label: '6 个内容平台', color: '#A78BFA', glow: 'rgba(167,139,250,0.3)' },
-              { label: '实时内容聚合', color: '#F43F5E', glow: 'rgba(244,63,94,0.3)' },
-              { label: '每日持续更新', color: '#A78BFA', glow: 'rgba(167,139,250,0.3)' },
-            ].map(({ label, color, glow }) => (
-              <span
-                key={label}
-                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
-                style={{
-                  background: 'rgba(22, 33, 62, 0.8)',
-                  border: `1px solid ${color}55`,
-                  color,
-                  boxShadow: `0 0 8px ${glow}`,
-                }}
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <a
+                href="/login"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_0_18px_rgba(124,58,237,0.35)] transition hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-bgDark-800"
               >
-                <span
-                  className="w-1.5 h-1.5 rounded-full mr-2"
-                  style={{ background: color, boxShadow: `0 0 4px ${glow}` }}
-                />
-                {label}
-              </span>
-            ))}
+                管理后台
+              </a>
+              <a
+                href="https://beian.miit.gov.cn/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border/70 px-5 py-3 text-sm font-semibold text-textLight-200 transition hover:border-primary-400 hover:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-bgDark-800"
+              >
+                备案信息
+              </a>
+            </div>
           </div>
 
-          {/* 俏皮描述 */}
-          <p className="text-textLight-200 text-base sm:text-lg leading-relaxed mb-8">
-            攻略太分散？高手藏得太深？<br />
-            别找了，都在这。
-          </p>
+          <div className="relative mx-auto aspect-square w-full max-w-md">
+            <div className="absolute inset-0 rounded-[2rem] border border-primary-400/25 bg-bgDark-700/70 shadow-[0_24px_80px_rgba(0,0,0,0.35)]" />
+            <div className="absolute inset-6 rounded-2xl border border-border/60 bg-bgDark-800/80 p-6">
+              <div className="flex items-center justify-between border-b border-border/50 pb-4">
+                <span className="text-sm font-medium text-textLight-200">Release Board</span>
+                <span className="rounded-full bg-accent-500/15 px-2.5 py-1 text-xs font-medium text-accent-500">
+                  Rebuild
+                </span>
+              </div>
 
-          {/* CTA 按钮 */}
-          <a
-            href="#guides"
-            className="cta-rose-btn inline-flex items-center gap-2 px-7 py-3 rounded-xl text-base font-semibold text-white"
-            style={{
-              background: 'linear-gradient(135deg, #F43F5E, #E11D48)',
-            }}
-          >
-            开始浏览
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </a>
+              <div className="mt-7 space-y-5">
+                {[
+                  ['内容结构', '进行中', '72%'],
+                  ['页面体验', '设计中', '54%'],
+                  ['后台工具', '整理中', '38%'],
+                ].map(([label, status, width]) => (
+                  <div key={label}>
+                    <div className="mb-2 flex items-center justify-between text-sm">
+                      <span className="text-textLight-100">{label}</span>
+                      <span className="text-textLight-300">{status}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-bgDark-600">
+                      <div
+                        className="h-2 rounded-full bg-gradient-to-r from-primary-500 to-accent-500"
+                        style={{ width }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
 
+              <div className="absolute bottom-6 left-6 right-6 rounded-xl border border-primary-400/25 bg-primary-500/10 px-4 py-3">
+                <p className="text-sm leading-6 text-textLight-200">
+                  新版首页会优先展示可浏览、可搜索、可持续维护的 TFT 攻略内容。
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-
-      {/* 攻略聚合列表 */}
-      <div id="guides" className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <GuidesList initialLimit={20} />
-        </div>
-      </div>
-
+      </section>
     </main>
   );
 }

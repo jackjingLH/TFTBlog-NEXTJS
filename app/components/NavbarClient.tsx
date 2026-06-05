@@ -16,8 +16,6 @@ interface NavbarClientProps {
 
 const navLinks = [
   { href: '/', label: '首页' },
-  { href: '/guides', label: '攻略' },
-  { href: '/about', label: '关于' },
 ];
 
 export default function NavbarClient({ session }: NavbarClientProps) {
@@ -33,8 +31,6 @@ export default function NavbarClient({ session }: NavbarClientProps) {
     <>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-
-          {/* Logo */}
           <Link
             href="/"
             className="text-xl font-bold bg-clip-text text-transparent"
@@ -43,7 +39,6 @@ export default function NavbarClient({ session }: NavbarClientProps) {
             铲什么铲
           </Link>
 
-          {/* Desktop links */}
           <div className="hidden sm:flex items-center space-x-6">
             {navLinks.map(({ href, label }) => (
               <Link
@@ -62,15 +57,8 @@ export default function NavbarClient({ session }: NavbarClientProps) {
               </Link>
             ))}
 
-            {session?.user && (
+            {session?.user ? (
               <>
-                <Link
-                  href="/dashboard"
-                  className="text-primary-400 font-medium transition-colors"
-                  style={{ textShadow: '0 0 8px rgba(167, 139, 250, 0.6)' }}
-                >
-                  控制台
-                </Link>
                 <span className="text-sm text-textLight-300">{session.user.email}</span>
                 <button
                   onClick={() => signOut({ callbackUrl: '/' })}
@@ -83,10 +71,20 @@ export default function NavbarClient({ session }: NavbarClientProps) {
                   退出
                 </button>
               </>
+            ) : (
+              <Link
+                href="/login"
+                className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200"
+                style={{
+                  background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
+                  boxShadow: '0 0 12px rgba(124, 58, 237, 0.4)',
+                }}
+              >
+                登录
+              </Link>
             )}
           </div>
 
-          {/* Mobile hamburger */}
           <button
             className="sm:hidden p-2 rounded-lg text-textLight-200 hover:text-primary-400 transition-colors"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -105,7 +103,6 @@ export default function NavbarClient({ session }: NavbarClientProps) {
         </div>
       </div>
 
-      {/* Mobile dropdown menu */}
       {mobileMenuOpen && (
         <div
           className="sm:hidden"
@@ -132,13 +129,21 @@ export default function NavbarClient({ session }: NavbarClientProps) {
                 {label}
               </Link>
             ))}
-            {session?.user && (
+            {session?.user ? (
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}
                 className="w-full text-left px-4 py-3 rounded-lg text-base font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
               >
                 退出登录
               </button>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-4 py-3 rounded-lg text-base font-medium text-primary-400"
+              >
+                登录
+              </Link>
             )}
           </div>
         </div>

@@ -124,7 +124,7 @@ export const authConfig = {
         (session.user as AdminUser).id = token.id as string;
         (session.user as AdminUser).email = token.email as string;
         (session.user as AdminUser).name = token.name as string;
-        (session.user as AdminUser).role = token.role as 'admin';
+        (session.user as AdminUser).role = token.role as 'admin' | 'user';
       }
       return session;
     },
