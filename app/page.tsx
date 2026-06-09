@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatDate, getAllGuides } from '@/lib/guides';
 
 const featureLabels = ['移动端阅读', '阵容攻略', '资料查询'];
@@ -49,6 +50,18 @@ export default function Home() {
               href={`/guides/${featured.slug}`}
               className="block rounded-lg border border-white/10 bg-[#111b24] p-4 transition hover:border-cyan-200/40"
             >
+              {featured.cover ? (
+                <div className="mb-4 overflow-hidden rounded-lg border border-white/10 bg-slate-950">
+                  <Image
+                    src={featured.cover}
+                    alt={`${featured.title} 封面`}
+                    width={900}
+                    height={520}
+                    className="h-auto w-full object-contain"
+                    unoptimized
+                  />
+                </div>
+              ) : null}
               <div className="flex items-center justify-between text-xs text-slate-400">
                 <span>推荐攻略</span>
                 <span>{formatDate(featured.updatedAt)}</span>
@@ -83,14 +96,28 @@ export default function Home() {
             <Link
               key={guide.slug}
               href={`/guides/${guide.slug}`}
-              className="rounded-lg border border-white/10 bg-white/[0.04] p-4 transition hover:border-cyan-200/35"
+              className="grid grid-cols-[92px_1fr] gap-3 rounded-lg border border-white/10 bg-white/[0.04] p-3 transition hover:border-cyan-200/35 sm:p-4"
             >
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{guide.source}</span>
-                <span>{guide.readingMinutes} 分钟</span>
+              {guide.cover ? (
+                <div className="overflow-hidden rounded-lg border border-white/10 bg-slate-950">
+                  <Image
+                    src={guide.cover}
+                    alt={`${guide.title} 封面`}
+                    width={240}
+                    height={180}
+                    className="h-full min-h-[92px] w-full object-cover"
+                    unoptimized
+                  />
+                </div>
+              ) : null}
+              <div className="min-w-0">
+                <div className="flex items-center justify-between gap-2 text-xs text-slate-500">
+                  <span className="truncate">{guide.source}</span>
+                  <span className="shrink-0">{guide.readingMinutes} 分钟</span>
+                </div>
+                <h3 className="mt-2 break-words text-xl font-semibold leading-snug text-white">{guide.title}</h3>
+                <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">{guide.excerpt}</p>
               </div>
-              <h3 className="mt-3 text-xl font-semibold leading-snug text-white">{guide.title}</h3>
-              <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">{guide.excerpt}</p>
             </Link>
           ))}
         </div>

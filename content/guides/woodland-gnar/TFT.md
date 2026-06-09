@@ -1,4 +1,8 @@
 ---
+title: 木灵族 纳尔
+cover: dataTFT (75).png
+source: tftacademy
+updatedAt: 2026-06-04
 tags:
   - 纳尔
   - 木灵族

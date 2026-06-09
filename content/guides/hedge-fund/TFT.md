@@ -1,4 +1,8 @@
 ---
+title: 如何玩对冲基金
+cover: Pasted image 20260601003743.png
+source: killerbrofu
+updatedAt: 2026-06-01
 tags:
   - 对冲基金
   - 经济

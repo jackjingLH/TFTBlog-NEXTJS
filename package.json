@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "import:guide-assets": "node scripts/import-guide-assets.mjs",
+    "check:guide-contract": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"moduleResolution\\\":\\\"node\\\"}\" scripts/check-guide-contract.ts",
     "build:static-deploy": "node scripts/build-static-deploy.mjs"
   },
   "dependencies": {

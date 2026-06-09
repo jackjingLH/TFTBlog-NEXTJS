@@ -1,4 +1,8 @@
 ---
+title: 格温 派克
+cover: dataTFT (73).png
+source: tftacademy
+updatedAt: 2026-06-02
 tags:
   - 格温
   - 派克

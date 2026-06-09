@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { formatDate, getAllGuides } from '@/lib/guides';
 
 export const metadata = {
@@ -36,20 +37,32 @@ export default function GuidesPage() {
             <Link
               key={guide.slug}
               href={`/guides/${guide.slug}`}
-              className="rounded-lg border border-white/10 bg-white/[0.04] p-4 transition hover:border-cyan-200/35"
+              className="overflow-hidden rounded-lg border border-white/10 bg-white/[0.04] transition hover:border-cyan-200/35"
             >
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{guide.source}</span>
-                <span>{formatDate(guide.updatedAt)}</span>
-              </div>
-              <h2 className="mt-3 text-2xl font-bold leading-snug text-white">{guide.title}</h2>
-              <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-400">{guide.excerpt}</p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {guide.tags.slice(0, 4).map((tag) => (
-                  <span key={tag} className="rounded border border-white/10 bg-slate-950 px-2 py-1 text-xs text-slate-300">
-                    {tag}
-                  </span>
-                ))}
+              {guide.cover ? (
+                <Image
+                  src={guide.cover}
+                  alt={`${guide.title} 封面`}
+                  width={900}
+                  height={520}
+                  className="h-auto w-full border-b border-white/10 bg-slate-950 object-contain"
+                  unoptimized
+                />
+              ) : null}
+              <div className="p-4">
+                <div className="flex items-center justify-between gap-3 text-xs text-slate-500">
+                  <span className="truncate">{guide.source}</span>
+                  <span className="shrink-0">{formatDate(guide.updatedAt)}</span>
+                </div>
+                <h2 className="mt-3 break-words text-2xl font-bold leading-snug text-white">{guide.title}</h2>
+                <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-400">{guide.excerpt}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {guide.tags.slice(0, 4).map((tag) => (
+                    <span key={tag} className="rounded border border-white/10 bg-slate-950 px-2 py-1 text-xs text-slate-300">
+                      {tag}
+                    </span>
+                  ))}
+                </div>
               </div>
             </Link>
           ))}

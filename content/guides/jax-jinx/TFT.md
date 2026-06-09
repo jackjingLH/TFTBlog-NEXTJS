@@ -1,4 +1,8 @@
 ---
+title: 贾克斯 金克丝
+cover: dataTFT (65).png
+source: tftacademy
+updatedAt: 2026-06-01
 tags:
   - 贾克斯
   - 金克丝

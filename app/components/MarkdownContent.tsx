@@ -20,7 +20,7 @@ function renderInline(text: string) {
 
     if (part.startsWith('`') && part.endsWith('`')) {
       return (
-        <code key={index} className="rounded bg-white/8 px-1.5 py-0.5 text-[0.92em] text-emerald-200">
+        <code key={index} className="break-words rounded bg-white/8 px-1.5 py-0.5 text-[0.92em] text-emerald-200">
           {part.slice(1, -1)}
         </code>
       );
@@ -28,7 +28,7 @@ function renderInline(text: string) {
 
     if (part.startsWith('#')) {
       return (
-        <span key={index} className="mr-1 inline-flex text-[0.92em] text-cyan-200/90">
+        <span key={index} className="mr-1 inline-flex break-words text-[0.92em] text-cyan-200/90">
           {part}
         </span>
       );
@@ -55,7 +55,7 @@ export default function MarkdownContent({ content, slug }: MarkdownContentProps)
     .split(/\r?\n/);
 
   return (
-    <div className="space-y-5 text-[16px] leading-8 text-slate-200">
+    <div className="min-w-0 space-y-5 overflow-hidden text-[16px] leading-8 text-slate-200">
       {lines.map((rawLine, index) => {
         const line = rawLine.trim();
 
@@ -78,10 +78,10 @@ export default function MarkdownContent({ content, slug }: MarkdownContentProps)
               id={id}
               className={
                 level === 1
-                  ? 'pt-2 text-3xl font-bold leading-tight text-white'
+                  ? 'break-words pt-2 text-[1.75rem] font-bold leading-tight text-white sm:text-3xl'
                   : level === 2
-                    ? 'scroll-mt-24 pt-5 text-2xl font-bold leading-tight text-white'
-                    : 'scroll-mt-24 pt-3 text-xl font-semibold text-white'
+                    ? 'scroll-mt-24 break-words pt-5 text-[1.45rem] font-bold leading-tight text-white sm:text-2xl'
+                    : 'scroll-mt-24 break-words pt-3 text-xl font-semibold text-white'
               }
             >
               {text}
@@ -105,13 +105,13 @@ export default function MarkdownContent({ content, slug }: MarkdownContentProps)
           }
 
           return (
-            <figure key={index} className="overflow-hidden rounded-lg border border-white/10 bg-slate-950">
+            <figure key={index} className="max-w-full overflow-hidden rounded-lg border border-white/10 bg-slate-950">
               <Image
                 src={src}
                 alt={alt}
                 width={900}
                 height={520}
-                className="h-auto w-full object-cover"
+                className="h-auto w-full max-w-full object-contain"
                 unoptimized
               />
             </figure>
@@ -136,7 +136,7 @@ export default function MarkdownContent({ content, slug }: MarkdownContentProps)
           );
         }
 
-        return <p key={index}>{renderInline(line)}</p>;
+        return <p key={index} className="break-words">{renderInline(line)}</p>;
       })}
     </div>
   );

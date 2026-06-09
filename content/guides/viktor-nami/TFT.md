@@ -1,4 +1,8 @@
 ---
+title: 维克托 娜美
+cover: dataTFT (67).png
+source: tftips
+updatedAt: 2026-06-08
 tags:
   - 维克托
   - 娜美

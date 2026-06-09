@@ -17,8 +17,22 @@ export interface Guide extends GuideMeta {
   headings: Array<{ id: string; text: string; level: number }>;
 }
 
+interface GuideContractMeta {
+  title: string;
+  tags: string[];
+  cover: string;
+  source: string;
+  updatedAt: string;
+}
+
+interface GuideContractValidation {
+  slug: string;
+  errors: string[];
+}
+
 const guidesRoot = path.join(process.cwd(), 'content', 'guides');
 const publicGuidesRoot = path.join(process.cwd(), 'public', 'guides');
+const requiredContractFields = ['title', 'tags', 'cover', 'source', 'updatedAt'] as const;
 
 function stripFrontmatter(raw: string) {
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
@@ -32,30 +46,109 @@ function stripFrontmatter(raw: string) {
   };
 }
 
-function parseTags(frontmatter: string) {
-  const lines = frontmatter.split(/\r?\n/);
-  const tags: string[] = [];
-  let insideTags = false;
+function unquote(value: string) {
+  const trimmed = value.trim();
+  const quoted = trimmed.match(/^['"]([\s\S]*)['"]$/);
+  return quoted ? quoted[1].trim() : trimmed;
+}
 
-  for (const line of lines) {
-    if (/^tags:\s*$/.test(line)) {
-      insideTags = true;
+function parseFrontmatterProperties(frontmatter: string) {
+  const values = new Map<string, string | string[]>();
+  let currentListKey: string | null = null;
+
+  for (const line of frontmatter.split(/\r?\n/)) {
+    const pair = line.match(/^([A-Za-z][A-Za-z0-9_-]*):\s*(.*)$/);
+    if (pair) {
+      const key = pair[1];
+      const value = pair[2].trim();
+      if (value) {
+        values.set(key, unquote(value));
+        currentListKey = null;
+      } else {
+        values.set(key, []);
+        currentListKey = key;
+      }
       continue;
     }
 
-    if (insideTags) {
-      const tag = line.match(/^\s*-\s*(.+?)\s*$/)?.[1];
-      if (tag) {
-        tags.push(tag);
-        continue;
-      }
-      if (/^\S/.test(line)) {
-        insideTags = false;
+    if (currentListKey) {
+      const listItem = line.match(/^\s*-\s*(.+?)\s*$/)?.[1];
+      if (listItem) {
+        const list = values.get(currentListKey);
+        if (Array.isArray(list)) {
+          list.push(unquote(listItem));
+        }
       }
     }
   }
 
-  return tags;
+  return values;
+}
+
+function normalizeAssetRef(value: string) {
+  const cleanValue = unquote(value);
+  const obsidian = cleanValue.match(/^!\[\[([^\]]+)\]\]$/)?.[1];
+  const markdown = cleanValue.match(/^!\[[^\]]*]\(([^)]+)\)$/)?.[1];
+  return (obsidian || markdown || cleanValue).split('|')[0].trim();
+}
+
+function readStringField(values: Map<string, string | string[]>, key: string, errors: string[]) {
+  const value = values.get(key);
+  if (typeof value !== 'string' || !value.trim()) {
+    errors.push(`missing required frontmatter field: ${key}`);
+    return '';
+  }
+  return value.trim();
+}
+
+function readTags(values: Map<string, string | string[]>, errors: string[]) {
+  const value = values.get('tags');
+  if (!Array.isArray(value) || value.length === 0) {
+    errors.push('missing required frontmatter field: tags');
+    return [];
+  }
+  return value.map((tag) => tag.trim()).filter(Boolean);
+}
+
+function parseGuideContract(raw: string): { body: string; metadata: GuideContractMeta | null; errors: string[] } {
+  const { frontmatter, body } = stripFrontmatter(raw);
+  const errors: string[] = [];
+
+  if (!frontmatter) {
+    errors.push('missing YAML frontmatter block');
+  }
+
+  const values = parseFrontmatterProperties(frontmatter);
+  const missingFields = requiredContractFields.filter((field) => !values.has(field));
+  for (const field of missingFields) {
+    errors.push(`missing required frontmatter field: ${field}`);
+  }
+
+  const title = readStringField(values, 'title', errors);
+  const tags = readTags(values, errors);
+  const cover = normalizeAssetRef(readStringField(values, 'cover', errors));
+  const source = readStringField(values, 'source', errors);
+  const updatedAt = readStringField(values, 'updatedAt', errors);
+
+  if (updatedAt && !/^\d{4}-\d{2}-\d{2}$/.test(updatedAt)) {
+    errors.push('frontmatter updatedAt must use YYYY-MM-DD');
+  }
+
+  if (errors.length > 0) {
+    return { body, metadata: null, errors: Array.from(new Set(errors)) };
+  }
+
+  return {
+    body,
+    metadata: {
+      title,
+      tags,
+      cover,
+      source,
+      updatedAt,
+    },
+    errors: [],
+  };
 }
 
 export function slugifyHeading(text: string) {
@@ -64,14 +157,6 @@ export function slugifyHeading(text: string) {
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '')
     .toLowerCase();
-}
-
-function getTitle(body: string, slug: string) {
-  return body.match(/^#\s+(.+)$/m)?.[1].trim() ?? slug;
-}
-
-function getSource(body: string) {
-  return body.match(/^来源：(.+)$/m)?.[1].trim() ?? '内容整理';
 }
 
 function getExcerpt(body: string) {
@@ -99,21 +184,6 @@ export function guideAssetPath(slug: string, imageName: string) {
   return `/guides/${slug}/${encodeURIComponent(cleanName).replace(/%2F/g, '/')}`;
 }
 
-function getCover(body: string, slug: string) {
-  const obsidianCover = body.match(/封面：!\[\[([^\]]+)\]\]/)?.[1];
-  if (obsidianCover) {
-    return guideAssetPath(slug, obsidianCover);
-  }
-
-  const firstObsidianImage = body.match(/!\[\[([^\]]+)\]\]/)?.[1];
-  if (firstObsidianImage) {
-    return guideAssetPath(slug, firstObsidianImage);
-  }
-
-  const markdownImage = body.match(/!\[[^\]]*\]\(([^)]+)\)/)?.[1];
-  return markdownImage && !markdownImage.startsWith('..') ? markdownImage : null;
-}
-
 function getHeadings(body: string) {
   return body
     .split(/\r?\n/)
@@ -133,23 +203,62 @@ function readGuide(slug: string): Guide | null {
   }
 
   const raw = fs.readFileSync(filePath, 'utf8');
-  const stat = fs.statSync(filePath);
-  const { frontmatter, body } = stripFrontmatter(raw);
-  const title = getTitle(body, slug);
+  const { body, metadata, errors } = parseGuideContract(raw);
+  if (!metadata) {
+    throw new Error(`Invalid guide contract in ${filePath}: ${errors.join('; ')}`);
+  }
+
+  const cover = guideAssetPath(slug, metadata.cover);
+  if (!cover) {
+    throw new Error(`Invalid guide contract in ${filePath}: cover asset not found: ${metadata.cover}`);
+  }
+
   const wordCount = body.replace(/\s/g, '').length;
 
   return {
     slug,
-    title,
-    tags: parseTags(frontmatter).slice(0, 8),
+    title: metadata.title,
+    tags: metadata.tags.slice(0, 8),
     excerpt: getExcerpt(body),
-    cover: getCover(body, slug),
-    updatedAt: stat.mtime.toISOString(),
-    source: getSource(body),
+    cover,
+    updatedAt: metadata.updatedAt,
+    source: metadata.source,
     readingMinutes: Math.max(1, Math.ceil(wordCount / 500)),
     content: body.trim(),
     headings: getHeadings(body),
   };
+}
+
+export function validateGuideContracts(): GuideContractValidation[] {
+  if (!fs.existsSync(guidesRoot)) {
+    return [{ slug: 'content/guides', errors: [`Guides directory not found: ${guidesRoot}`] }];
+  }
+
+  return fs
+    .readdirSync(guidesRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => {
+      const filePath = path.join(guidesRoot, entry.name, 'TFT.md');
+      if (!fs.existsSync(filePath)) {
+        return { slug: entry.name, errors: [] };
+      }
+
+      const raw = fs.readFileSync(filePath, 'utf8');
+      const { metadata, errors } = parseGuideContract(raw);
+      const guideErrors = [...errors];
+
+      if (metadata?.cover && !guideAssetPath(entry.name, metadata.cover)) {
+        guideErrors.push(`cover asset not found: ${metadata.cover}`);
+      }
+
+      return { slug: entry.name, errors: guideErrors };
+    })
+    .filter((result) => result.errors.length > 0);
+}
+
+export function validateGuideContractSource(slug: string, raw: string): GuideContractValidation {
+  const { errors } = parseGuideContract(raw);
+  return { slug, errors };
 }
 
 export function getAllGuides() {
