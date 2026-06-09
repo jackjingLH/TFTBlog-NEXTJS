@@ -1,9 +1,6 @@
-import { auth } from '@/auth';
 import NavbarClient from './NavbarClient';
 
-export default async function Navbar() {
-  const session = await auth();
-
+export default function Navbar() {
   return (
     <nav
       className="sticky top-0 z-50 border-b"
@@ -15,7 +12,7 @@ export default async function Navbar() {
         boxShadow: '0 1px 20px rgba(124, 58, 237, 0.15)',
       }}
     >
-      <NavbarClient session={session} />
+      <NavbarClient />
     </nav>
   );
 }

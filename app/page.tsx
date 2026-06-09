@@ -1,88 +1,98 @@
-export default function Home() {
-  return (
-    <main className="min-h-[calc(100vh-10rem)] overflow-hidden bg-bgDark-800">
-      <section className="relative isolate flex min-h-[calc(100vh-10rem)] items-center px-4 py-16 sm:px-6 lg:px-8">
-        <div
-          className="absolute inset-0 -z-10 opacity-35"
-          style={{
-            backgroundImage:
-              'linear-gradient(rgba(167, 139, 250, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(167, 139, 250, 0.08) 1px, transparent 1px)',
-            backgroundSize: '44px 44px',
-            maskImage: 'linear-gradient(to bottom, transparent, black 12%, black 78%, transparent)',
-          }}
-        />
+import Link from 'next/link';
+import { formatDate, getAllGuides } from '@/lib/guides';
 
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 lg:grid-cols-[1.08fr_0.92fr]">
-          <div className="max-w-2xl">
-            <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-primary-400/35 bg-bgDark-700/60 px-3 py-1.5 text-sm text-primary-400">
-              <span className="h-2 w-2 rounded-full bg-accent-500 shadow-[0_0_14px_rgba(244,63,94,0.85)]" />
-              网站更新中
+const featureLabels = ['移动端阅读', '阵容攻略', '资料查询'];
+
+export default function Home() {
+  const guides = getAllGuides();
+  const featured = guides[0];
+  const latestGuides = guides.slice(1, 5);
+
+  return (
+    <main className="min-h-screen bg-[#090d12] text-white">
+      <section className="border-b border-white/10 bg-[#0d141b]">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 pb-8 pt-7 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8">
+          <div className="flex flex-col justify-end">
+            <div className="flex flex-wrap gap-2">
+              {featureLabels.map((label) => (
+                <span key={label} className="rounded border border-cyan-300/20 bg-cyan-300/8 px-2.5 py-1 text-xs text-cyan-100">
+                  {label}
+                </span>
+              ))}
             </div>
 
-            <h1 className="text-4xl font-bold leading-tight text-textLight-100 sm:text-6xl">
-              铲什么铲正在重建
+            <h1 className="mt-5 max-w-2xl text-4xl font-bold leading-tight tracking-normal sm:text-5xl">
+              铲什么铲
             </h1>
-
-            <p className="mt-6 max-w-xl text-base leading-8 text-textLight-200 sm:text-lg">
-              我们正在整理新版 TFT 攻略内容、页面结构和后台工具。正式上线后，这里会恢复阵容攻略、版本更新和内容管理能力。
+            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
+              先做适合手机阅读的 TFT 攻略站。首页突出当前可玩的阵容、运营节奏和资料入口，减少复杂操作，把内容浏览跑顺。
             </p>
 
-            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-              <a
-                href="/login"
-                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary-500 px-5 py-3 text-sm font-semibold text-white shadow-[0_0_18px_rgba(124,58,237,0.35)] transition hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-bgDark-800"
+            <div className="mt-6 flex gap-3">
+              <Link
+                href="/guides"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-200 focus:ring-offset-2 focus:ring-offset-[#0d141b]"
               >
-                管理后台
-              </a>
-              <a
-                href="https://beian.miit.gov.cn/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-border/70 px-5 py-3 text-sm font-semibold text-textLight-200 transition hover:border-primary-400 hover:text-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 focus:ring-offset-bgDark-800"
+                看攻略
+              </Link>
+              <Link
+                href="/data"
+                className="inline-flex min-h-11 items-center justify-center rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-amber-200/50 hover:text-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-200 focus:ring-offset-2 focus:ring-offset-[#0d141b]"
               >
-                备案信息
-              </a>
+                查资料
+              </Link>
             </div>
           </div>
 
-          <div className="relative mx-auto aspect-square w-full max-w-md">
-            <div className="absolute inset-0 rounded-[2rem] border border-primary-400/25 bg-bgDark-700/70 shadow-[0_24px_80px_rgba(0,0,0,0.35)]" />
-            <div className="absolute inset-6 rounded-2xl border border-border/60 bg-bgDark-800/80 p-6">
-              <div className="flex items-center justify-between border-b border-border/50 pb-4">
-                <span className="text-sm font-medium text-textLight-200">Release Board</span>
-                <span className="rounded-full bg-accent-500/15 px-2.5 py-1 text-xs font-medium text-accent-500">
-                  Rebuild
-                </span>
+          {featured ? (
+            <Link
+              href={`/guides/${featured.slug}`}
+              className="block rounded-lg border border-white/10 bg-[#111b24] p-4 transition hover:border-cyan-200/40"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>推荐攻略</span>
+                <span>{formatDate(featured.updatedAt)}</span>
               </div>
-
-              <div className="mt-7 space-y-5">
-                {[
-                  ['内容结构', '进行中', '72%'],
-                  ['页面体验', '设计中', '54%'],
-                  ['后台工具', '整理中', '38%'],
-                ].map(([label, status, width]) => (
-                  <div key={label}>
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                      <span className="text-textLight-100">{label}</span>
-                      <span className="text-textLight-300">{status}</span>
-                    </div>
-                    <div className="h-2 rounded-full bg-bgDark-600">
-                      <div
-                        className="h-2 rounded-full bg-gradient-to-r from-primary-500 to-accent-500"
-                        style={{ width }}
-                      />
-                    </div>
-                  </div>
+              <h2 className="mt-5 text-3xl font-bold leading-tight text-white">{featured.title}</h2>
+              <p className="mt-4 text-sm leading-6 text-slate-300">{featured.excerpt}</p>
+              <div className="mt-6 flex flex-wrap gap-2">
+                {featured.tags.slice(0, 5).map((tag) => (
+                  <span key={tag} className="rounded border border-white/10 bg-white/5 px-2 py-1 text-xs text-slate-300">
+                    {tag}
+                  </span>
                 ))}
               </div>
+            </Link>
+          ) : null}
+        </div>
+      </section>
 
-              <div className="absolute bottom-6 left-6 right-6 rounded-xl border border-primary-400/25 bg-primary-500/10 px-4 py-3">
-                <p className="text-sm leading-6 text-textLight-200">
-                  新版首页会优先展示可浏览、可搜索、可持续维护的 TFT 攻略内容。
-                </p>
-              </div>
-            </div>
+      <section className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">Latest</p>
+            <h2 className="mt-2 text-2xl font-bold">最新攻略</h2>
           </div>
+          <Link href="/guides" className="text-sm font-semibold text-cyan-200 hover:text-cyan-100">
+            全部
+          </Link>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {latestGuides.map((guide) => (
+            <Link
+              key={guide.slug}
+              href={`/guides/${guide.slug}`}
+              className="rounded-lg border border-white/10 bg-white/[0.04] p-4 transition hover:border-cyan-200/35"
+            >
+              <div className="flex items-center justify-between text-xs text-slate-500">
+                <span>{guide.source}</span>
+                <span>{guide.readingMinutes} 分钟</span>
+              </div>
+              <h3 className="mt-3 text-xl font-semibold leading-snug text-white">{guide.title}</h3>
+              <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">{guide.excerpt}</p>
+            </Link>
+          ))}
         </div>
       </section>
     </main>

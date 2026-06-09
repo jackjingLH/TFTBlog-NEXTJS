@@ -3,22 +3,14 @@
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { signOut } from 'next-auth/react';
-
-interface NavbarClientProps {
-  session: {
-    user?: {
-      email?: string | null;
-      name?: string | null;
-    } | null;
-  } | null;
-}
 
 const navLinks = [
   { href: '/', label: '首页' },
+  { href: '/guides', label: '攻略' },
+  { href: '/data', label: '资料' },
 ];
 
-export default function NavbarClient({ session }: NavbarClientProps) {
+export default function NavbarClient() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -39,7 +31,7 @@ export default function NavbarClient({ session }: NavbarClientProps) {
             铲什么铲
           </Link>
 
-          <div className="hidden sm:flex items-center space-x-6">
+          <div className="hidden items-center space-x-6 sm:flex">
             {navLinks.map(({ href, label }) => (
               <Link
                 key={href}
@@ -56,33 +48,6 @@ export default function NavbarClient({ session }: NavbarClientProps) {
                 />
               </Link>
             ))}
-
-            {session?.user ? (
-              <>
-                <span className="text-sm text-textLight-300">{session.user.email}</span>
-                <button
-                  onClick={() => signOut({ callbackUrl: '/' })}
-                  className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200"
-                  style={{
-                    background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
-                    boxShadow: '0 0 12px rgba(124, 58, 237, 0.4)',
-                  }}
-                >
-                  退出
-                </button>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                className="px-4 py-2 text-sm font-medium text-white rounded-lg transition-all duration-200"
-                style={{
-                  background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
-                  boxShadow: '0 0 12px rgba(124, 58, 237, 0.4)',
-                }}
-              >
-                登录
-              </Link>
-            )}
           </div>
 
           <button
@@ -129,22 +94,6 @@ export default function NavbarClient({ session }: NavbarClientProps) {
                 {label}
               </Link>
             ))}
-            {session?.user ? (
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="w-full text-left px-4 py-3 rounded-lg text-base font-medium text-rose-400 hover:bg-rose-500/10 transition-colors"
-              >
-                退出登录
-              </button>
-            ) : (
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block px-4 py-3 rounded-lg text-base font-medium text-primary-400"
-              >
-                登录
-              </Link>
-            )}
           </div>
         </div>
       )}

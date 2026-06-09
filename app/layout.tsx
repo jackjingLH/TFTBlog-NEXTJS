@@ -16,8 +16,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "铲什么铲 - 网站更新中",
-  description: "铲什么铲 TFT 内容站正在重建中。",
+  title: "铲什么铲 - TFT 攻略与资料",
+  description: "移动端优先的 TFT 攻略文章与资料查询入口。",
 };
 
 export default function RootLayout({
@@ -28,10 +28,10 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex min-h-screen flex-col`}
       >
         <Navbar />
-        <main className="flex-1">{children}</main>
+        <div className="flex-1">{children}</div>
         <Footer />
       </body>
     </html>
