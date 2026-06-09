@@ -1,0 +1,16 @@
+## REVIEW-01
+- Source doc: docs/approved-next-steps-plan.md
+- Review agent: fallback independent-context
+- Scope checked: image asset import, low-memory deployment, mobile guide detail polish, Obsidian content import contract, CSV/Git state alignment
+- Evidence checked: CSV rows PLAN-01..PLAN-04, commits b793e1c/6100cbc/b474803, npm run check:guide-contract, npm run import:guide-assets, npm run lint, npm run build, server curl against www.jingcc.cc host
+- Claim/evidence alignment: mismatches found
+- Limited validation honestly reported: yes
+- Result: gaps_found
+- Gaps:
+  - Latest PLAN-03 and PLAN-04 changes are committed locally, but the server still serves the earlier PLAN-02 deployment bundle. Server Host check confirms the site is no longer maintenance, but `/guides/woodland-gnar` does not contain the latest cover alt text from the content contract/display changes.
+- Follow-up issues added: FOLLOWUP-01, REVIEW-02
+- Assumptions:
+  - The intended final state is that the deployed MVP reflects the latest mobile reading and content contract changes, not only the earlier post-image-import MVP.
+- Decision debt: none
+- Human-required blockers: none
+- Sub-agent note: same-model sub-agent 019eaa42-7146-7223-be55-1ab2cef9ac8b was started but did not return after repeated waits and was closed as stalled.
