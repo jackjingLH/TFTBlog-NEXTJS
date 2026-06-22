@@ -1,370 +1,205 @@
 # CLAUDE.md
 
-本文件为 Claude Code (claude.ai/code) 提供此项目的开发指南。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚫 禁止行为
+## Project Overview
 
-1. **禁止自动创建 Markdown 文档**
-   - ❌ 不主动生成 README、指南、报告、总结等 .md 文件
-   - ❌ 不生成技术文档、使用说明、最佳实践等文档
-   - ❌ 不创建架构说明、API 文档、部署指南等
-   - ✅ 仅在用户明确要求时才创建文档
+TFT 金铲铲博客 - A Next.js 14 blog application for League of Legends: Teamfight Tactics content, featuring guides, hero analysis, and version updates.
 
-2. **脚本文件管理**
-   - ✅ 可以创建必要的脚本文件（.sh、.bat、.js 等）
-   - ✅ 脚本文件用于自动化任务、数据抓取、部署等
+**Key characteristics:**
+- Low-memory deployment: local build + SCP upload (server cannot access GitHub)
+- Dual content system: SQLite runtime content + static shell pages
+- Obsidian-first workflow: guides authored in Obsidian Markdown, published via CLI scripts
 
-3. **文件管理原则**
-   - ❌ 避免创建测试文件、备份文件、临时文件
-   - ❌ 不创建多个版本的同一功能文件
-   - ✅ 保持代码库简洁，只保留必要文件
-
-## 项目概述
-
-TFT金铲铲博客 (TFT Blog) - 一个基于 Next.js 的全栈博客应用，专注于云顶之弈内容聚合，包括阵容攻略、英雄解析、装备合成、版本更新和新手教程。
-
-## 开发命令
+## Development Commands
 
 ```bash
-npm run dev      # 启动开发服务器 http://localhost:3000
-npm run build    # 构建生产版本
-npm run start    # 启动生产服务器
-npm run lint     # 运行 ESLint 代码检查
+npm run dev                      # Start dev server at http://localhost:3000
+npm run build                    # Build production bundle (.next/)
+npm run lint                     # Run ESLint
+
+# Guide content validation
+npm run check:guide-contract     # Validate guide frontmatter and assets
+npm run import:guide-assets      # Copy images from Obsidian to public/guides/
+
+# SQLite publishing
+npm run check:sqlite-contract    # Validate SQLite schema
+npm run check:publish-contract   # Validate publish payload structure
+npm run publish:guide            # Publish guide to production SQLite
+
+# Static deployment
+npm run build:static-deploy      # Build static MVP bundle (.deploy/)
+npm run check:static-api-contract    # Validate runtime API contract
+npm run check:static-shell-contract  # Validate static shell structure
 ```
 
-## 技术架构
+## Architecture
 
-### 技术栈
-- **框架**: Next.js 14 with App Router
-- **语言**: TypeScript (严格模式)
-- **数据库**: MongoDB (Mongoose 8.x)
-- **样式**: Tailwind CSS
-- **进程管理**: PM2 (生产环境)
-
-### 目录结构
+### Content Flow
 
 ```
-app/
-├── api/              # API 路由 (Next.js route handlers)
-│   ├── posts/        # 文章接口
-│   ├── categories/   # 分类接口
-│   ├── feeds/        # RSS 聚合接口
-│   └── about/        # 关于页面接口
-├── components/       # React 组件
-│   ├── Navbar.tsx
-│   └── FeedList.tsx
-├── about/            # 关于页面
-│   └── page.tsx
-├── layout.tsx        # 根布局
-└── page.tsx          # 首页
-
-lib/
-├── mongodb.ts        # MongoDB 连接工具（带缓存）
-└── services/         # 服务层
-    ├── cache.service.ts     # 缓存服务
-    ├── rsshub.service.ts    # RSSHub 服务
-    └── tftimes.service.ts   # TFT Times 服务
-
-types/
-├── article.ts        # 文章类型定义
-└── mongoose.d.ts     # Mongoose 全局类型
+Obsidian Markdown (content/guides/<slug>/TFT.md)
+        ↓
+publish:guide script
+        ↓
+[Upload images to server /uploads/guides/<slug>/]
+        ↓
+[Import payload to server SQLite]
+        ↓
+Runtime API (/api/guides) reads SQLite
+        ↓
+Static shell pages fetch and render
 ```
 
-### 数据库连接模式
+### Dual Content System
 
-项目在 `lib/mongodb.ts` 中使用缓存的 MongoDB 连接模式：
-- 全局缓存连接，防止开发环境热重载时产生多个连接
-- 使用 Mongoose，设置 `bufferCommands: false`
-- 需要 `MONGODB_URI` 环境变量
-- 首次请求时建立连接（懒加载）
+**Why SQLite + Static Shell:**
+- Server has 1.6GB RAM, cannot run full Next.js build
+- Solution: pre-render static HTML + lightweight Node server serving SQLite data
 
-### API 路由模式
+**File structure:**
+```
+.deploy/tftblog-static-mvp/
+├── server.mjs              # Lightweight runtime (scripts/static-mvp-server.mjs)
+├── site/                   # Static prerendered pages
+│   ├── index.html          # Homepage shell
+│   ├── guides/             # Guide list shell
+│   └── _next/              # Client JS/CSS
+└── html/                   # API shell templates
 
-API 路由遵循 Next.js App Router 约定：
-- 位于 `app/api/[resource]/route.ts`
-- 导出异步函数：`GET`, `POST`, `PUT`, `DELETE`
-- 通过 `mongoose.connection.db` 直接访问 MongoDB 集合
-- 支持 `page` 和 `limit` 查询参数分页
-- 返回标准化的 JSON 响应，包含 `status`、`data` 和元数据
-
-API 响应结构示例：
-```typescript
-{
-  status: 'success',
-  count: number,
-  total: number,
-  page: number,
-  pageSize: number,
-  data: Array
-}
+data/tftblog.sqlite         # Content database (gitignored)
+uploads/guides/<slug>/      # Guide images (persistent, not in .deploy)
 ```
 
-### 路径别名
+### Key Files
 
-项目使用 `@/*` 路径别名指向根目录（在 tsconfig.json 中配置）。
+**Content layer:**
+- `lib/guide-content-store.ts` - SQLite repository for guides (upsert, list, findBySlug)
+- `lib/guides.ts` - Markdown fallback reader (when SQLite absent)
+- `lib/guide-publisher.ts` - Publish orchestrator (parse MD → upload images → import SQLite)
+- `lib/server-upload-assets.ts` - SCP image uploader
 
-导入示例：
-```typescript
-import dbConnect from '@/lib/mongodb';
-import { Article } from '@/types/article';
+**Runtime:**
+- `scripts/static-mvp-server.mjs` - Production server (serves static + API from SQLite)
+- `app/guides/[slug]/page.tsx` - Client-side shell that fetches `/api/guides/<slug>`
+
+**Validation:**
+- `scripts/check-guide-contract.ts` - Validate frontmatter schema
+- `scripts/check-sqlite-contract.ts` - Validate SQLite schema
+- `scripts/check-publish-contract.ts` - Validate publish payload structure
+
+### Guide Content Contract
+
+Guides must live at `content/guides/<slug>/TFT.md` with frontmatter:
+
+```yaml
+---
+title: 格温 派克
+cover: dataTFT (73).png      # Filename in public/guides/<slug>/
+source: tftacademy
+updatedAt: 2026-06-02        # YYYY-MM-DD format
+tags:
+  - 格温
+  - 派克
+---
 ```
 
-## 环境变量
+Run `npm run check:guide-contract` before publishing. Missing fields or invalid dates cause clear errors listing the slug and reason.
 
-开发环境（`.env.local`）和生产环境（`.env.production`）所需的环境变量：
+## Deployment
+
+**Server:** 47.99.202.3 at `/var/www/TFTBlog-NEXTJS`  
+**Access:** http://47.99.202.3 or https://www.jingcc.cc  
+**PM2 app:** `tftblog-nextjs` on port 3002  
+**Nginx:** reverse proxy to localhost:3002
+
+### Code Deployment (infrequent)
+
+When updating app features or UI:
+
+```bash
+npm run build                                      # 1. Build .next/
+npm run build:static-deploy                        # 2. Build .deploy/ bundle
+scp -r .deploy/tftblog-static-mvp.tar.gz root@47.99.202.3:/tmp/  # 3. Upload
+ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && \
+  tar -xzf /tmp/tftblog-static-mvp.tar.gz && \
+  pm2 restart tftblog-nextjs && pm2 save"          # 4. Extract & restart
+```
+
+### Guide Publishing (frequent)
+
+When adding or updating guide content:
+
+```bash
+npm run publish:guide -- content/guides/<slug>/TFT.md
+```
+
+This:
+1. Validates frontmatter
+2. Uploads images to server `/var/www/TFTBlog-NEXTJS/uploads/guides/<slug>/`
+3. Imports guide payload to server SQLite via SCP + SSH
+4. New content appears immediately on https://www.jingcc.cc/guides without rebuild
+
+**Image URLs:** Stored in SQLite as `/uploads/guides/<slug>/<hash>-<filename>`, served by Nginx with long-term cache headers.
+
+## Environment Variables
+
+**Required in `.env.local` or `.env.production`:**
 
 ```env
+# SQLite content database (local/server)
+DATABASE_URL=file:./data/tftblog.sqlite
+
+# Publishing (SSH/SCP to server)
+PUBLISH_SSH_TARGET=root@47.99.202.3
+PUBLISH_REMOTE_APP_DIR=/var/www/TFTBlog-NEXTJS
+PUBLISH_REMOTE_DATABASE_URL=file:./data/tftblog.sqlite
+PUBLISH_UPLOADS_DIR=/var/www/TFTBlog-NEXTJS/uploads
+PUBLISH_UPLOADS_PUBLIC_BASE=/uploads
+```
+
+**MongoDB (legacy, for RSS aggregation only):**
+```env
 MONGODB_URI=mongodb://47.99.202.3:27017/tftblog
-JWT_SECRET=your-secret-key
-NODE_ENV=development|production
-PORT=3000
-NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-## 数据库架构
+## File Management Rules
 
-MongoDB 数据库包含以下集合：
+**Never create duplicate files for the same purpose:**
+- ❌ Don't create `deploy-v2.bat` when `deploy.bat` exists → update `deploy.bat`
+- ❌ Don't create `test-api-new.ts` when `test-api.ts` exists → update `test-api.ts`
+- ✅ Check if a file exists before creating a similar one
+- ✅ Delete temporary test files after validation
 
-### posts 集合
-- 文章数据：标题、内容、标签、浏览量、创建时间
-- 预置了 5 篇示例文章
+**Don't auto-generate documentation:**
+- ❌ Don't create README.md, architecture docs, API docs unless explicitly asked
+- ✅ Scripts for automation are fine (.sh, .bat, .js, .mjs)
 
-### categories 集合
-- 5 个分类：阵容攻略、英雄解析、装备合成、版本更新、新手教程
+## Path Aliases
 
-### about 集合
-- 关于页面内容
-- 包含：标题、描述、Markdown 内容、特性列表、统计数据
+Import using `@/*` alias (defined in tsconfig.json):
 
-### chat 集合
-- 聊天或反馈记录（遗留数据）
+```typescript
+import { GuideContentStore } from '@/lib/guide-content-store';
+import { getAllGuides } from '@/lib/guides';
+```
 
-## API 接口测试
+## Production Server Info
 
-开发环境 API 端点：
-- `http://localhost:3000/api/posts?page=1&limit=10` - 获取分页文章
-- `http://localhost:3000/api/categories` - 获取所有分类
-- `http://localhost:3000/api/feeds?limit=15` - 获取 RSS 聚合内容
-- `http://localhost:3000/api/about` - 获取关于页面数据
-
-## 部署方式
-
-### ⚠️ 重要说明
-
-**服务器无法访问 GitHub**，因此采用**本地构建 + SCP 上传**的部署方式。
-
-### 📋 部署分类
-
-项目部署分为两类：
-
-1. **代码部署**（不频繁）：更新功能、修复 Bug、UI 调整
-2. **攻略上传**（频繁）：每日更新攻略内容和图片
-
-**两者独立操作，互不影响。**
-
----
-
-## 一、代码部署流程（功能更新）
-
-#### 1. 本地构建
-
+**PM2 commands:**
 ```bash
-# 在本地构建生产版本
-npm run build
+pm2 status                    # View app status
+pm2 logs tftblog-nextjs      # View logs
+pm2 restart tftblog-nextjs   # Restart app
+pm2 save                     # Save process list
 ```
 
-构建产物位于 `.next` 目录。
+**Nginx:**
+- Config: `/etc/nginx/sites-enabled/tftblog` (or similar)
+- Logs: `/www/wwwlogs/tftblog.log`
+- Serves `/uploads/` from filesystem with immutable cache headers
 
-#### 2. 上传构建产物
-
-```bash
-# 上传 .next 目录（构建产物）
-scp -r .next root@47.99.202.3:/var/www/TFTBlog-NEXTJS/
-```
-
-**说明**：
-- 代码部署通常**不需要**上传 `public/guides`（攻略独立管理）
-- 如果修改了网站基础资源（favicon、logo 等），才需要上传 `public`（不含 guides）
-
-#### 3. 重启 PM2 应用并清理缓存
-
-```bash
-# SSH 连接服务器，重启应用并清理 Nginx 缓存
-ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save && rm -rf /www/server/nginx/proxy_cache_dir/* && systemctl reload nginx"
-```
-
-#### 4. 验证部署
-
-```bash
-# 测试生产环境页面
-curl -I http://47.99.202.3/about
-
-# 测试 API 接口
-curl http://47.99.202.3/api/about
-```
-
-### 代码部署 - 完整流程
-
-```bash
-# 1. 本地构建
-npm run build
-
-# 2. 上传构建产物
-scp -r .next root@47.99.202.3:/var/www/TFTBlog-NEXTJS/
-
-# 3. 重启应用并清理缓存
-ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save && rm -rf /www/server/nginx/proxy_cache_dir/* && systemctl reload nginx"
-
-# 4. 验证部署
-curl -I http://47.99.202.3/
-```
-
-**一键部署命令**（推荐）：
-```bash
-npm run build && scp -r .next root@47.99.202.3:/var/www/TFTBlog-NEXTJS/ && ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs && pm2 save && rm -rf /www/server/nginx/proxy_cache_dir/* && systemctl reload nginx && echo '✅ 代码部署完成'"
-```
-
----
-
-## 二、攻略管理流程（内容更新）
-
-### 📝 攻略文件结构
-
-```
-public/guides/
-├── belveth-aatrox/
-│   ├── image.png
-│   ├── image-1.png
-│   └── dataTFT (23).png
-├── ekko-chogath/
-│   └── ...
-└── kaisa-belveth/
-    └── ...
-```
-
-### 🚀 上传新攻略或更新现有攻略
-
-#### 方法 1：上传单个攻略（推荐）
-
-```bash
-# 上传指定攻略目录
-scp -r public/guides/belveth-aatrox root@47.99.202.3:/var/www/TFTBlog-NEXTJS/public/guides/
-
-# 重启应用（让 Next.js 识别新文件）
-ssh root@47.99.202.3 "cd /var/www/TFTBlog-NEXTJS && pm2 restart tftblog-nextjs"
-```
-
-**一键命令**：
-```bash
-scp -r public/guides/belveth-aatrox root@47.99.202.3:/var/www/TFTBlog-NEXTJS/public/guides/ && ssh root@47.99.202.3 "pm2 restart tftblog-nextjs && echo '✅ 攻略已上传'"
-```
-
-#### 方法 2：上传所有攻略
-
-```bash
-# 上传整个 guides 目录
-scp -r public/guides root@47.99.202.3:/var/www/TFTBlog-NEXTJS/public/
-
-# 重启应用
-ssh root@47.99.202.3 "pm2 restart tftblog-nextjs"
-```
-
-**一键命令**：
-```bash
-scp -r public/guides root@47.99.202.3:/var/www/TFTBlog-NEXTJS/public/ && ssh root@47.99.202.3 "pm2 restart tftblog-nextjs && echo '✅ 所有攻略已上传'"
-```
-
-### 📌 注意事项
-
-1. **上传攻略后必须重启 Next.js**
-   - `pm2 restart tftblog-nextjs`
-   - 否则新图片会返回 404
-
-2. **不需要清理 Nginx 缓存**
-   - 攻略图片是首次访问，不存在缓存问题
-
-3. **不需要重新构建代码**
-   - 攻略是静态文件，无需 `npm run build`
-
-4. **文件名注意事项**
-   - 支持中文文件名
-   - 支持空格（会自动 URL 编码）
-   - 推荐使用英文和数字
-
-### PM2 配置
-
-生产环境使用 PM2 进行进程管理：
-- 配置文件：`ecosystem.config.js`
-- 应用名称：`tftblog-nextjs`
-- 实例数：1
-- 内存限制：1G
-
-```bash
-# PM2 常用命令
-pm2 status                    # 查看应用状态
-pm2 logs tftblog-nextjs      # 查看日志
-pm2 restart tftblog-nextjs   # 重启应用
-pm2 stop tftblog-nextjs      # 停止应用
-pm2 save                     # 保存当前进程列表
-```
-
-## 文件管理规范
-
-### 🚫 避免文件重复
-
-**原则：不要为同一功能创建重复文件。**
-
-开发时遵循：
-
-1. **单一数据源**：每个功能只应有一个专用文件
-2. **修改现有文件**：不要创建新版本，而是更新现有文件
-3. **整合相关代码**：将相似功能保持在逻辑分组中
-4. **避免测试文件泛滥**：验证后删除测试文件，不要保留多个版本
-
-**错误示例：**
-- 存在 `deploy.bat` 时创建 `deploy-v2.bat` → 应该：修改 `deploy.bat`
-- 存在 `test-api.ts` 时创建 `test-api-new.ts` → 应该：更新 `test-api.ts`
-- 存在 `config.js` 时创建 `config-backup.js` → 应该：修改 `config.js`
-
-**正确流程：**
-1. 检查功能对应的文件是否已存在
-2. 如果存在，修改现有文件
-3. 如果不存在，创建命名规范的新文件
-4. 使用后删除临时/测试文件
-
-## 数据库连接详情
-
-云端 MongoDB 实例：`mongodb://47.99.202.3:27017/tftblog`
-
-注意：这是一个现有的云数据库，包含从之前项目迁移的预置数据。
-
-## RSS 聚合服务
-
-项目从以下来源聚合内容：
-
-1. **RSSHub** - 开源 RSS 订阅服务
-   - 荡狗天天开心
-   - 手刃猫咪
-   - 襄平霸王东
-
-2. **TFT Times** - 日本云顶之弈资讯站
-   - 分类：メタ＆攻略、パッチノート、ニュース
-
-### 缓存策略
-
-- 内存缓存：15 分钟
-- 缓存服务：`lib/services/cache.service.ts`
-- 手动刷新：`POST /api/feeds/refresh`
-
-## 生产环境信息
-
-- **服务器地址**：47.99.202.3
-- **访问地址**：http://47.99.202.3
-- **项目路径**：/var/www/TFTBlog-NEXTJS
-- **Nginx 配置**：反向代理到 localhost:3000
-- **日志路径**：
-  - Nginx: `/www/wwwlogs/tftblog.log`
-  - MongoDB: `/www/server/mongodb/log/mongodb.log`
-  - PM2: `pm2 logs tftblog-nextjs`
-
-
+**SQLite database:**
+- Path: `/var/www/TFTBlog-NEXTJS/data/tftblog.sqlite`
+- Schema: `guides` and `guide_tags` tables
+- Backup: included in server backup (uploads/ directory is source of truth for images)
