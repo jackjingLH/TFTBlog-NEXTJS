@@ -60,6 +60,20 @@ scripts/*-restore-data.js
 
 # docker files with credentials
 docker-compose.rsshub.yml
+Dockerfile.rsshub
 
 # local PM2 config (contains credentials)
 ecosystem.local.js
+
+# temporary files
+temp/
+*.tmp
+*.bak
+*.old
+
+# deprecated files
+SETUP.md
+AGENTS.md
+maintenance-server.js
+deploy.bat
+nginx.conf
