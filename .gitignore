@@ -53,6 +53,9 @@ logs/
 .claude/
 .mongodb-credentials.txt
 
+# local issue tracker
+.scratch/
+
 # security scripts with credentials
 scripts/secure-mongodb*.sh
 scripts/restore-database.*

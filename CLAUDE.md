@@ -175,6 +175,20 @@ MONGODB_URI=mongodb://47.99.202.3:27017/tftblog
 - ❌ Don't create README.md, architecture docs, API docs unless explicitly asked
 - ✅ Scripts for automation are fine (.sh, .bat, .js, .mjs)
 
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked as markdown files under `.scratch/<feature>/` in this repository. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default label vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: `CONTEXT.md` and `docs/adr/` at repo root. See `docs/agents/domain.md`.
+
 ## Path Aliases
 
 Import using `@/*` alias (defined in tsconfig.json):
