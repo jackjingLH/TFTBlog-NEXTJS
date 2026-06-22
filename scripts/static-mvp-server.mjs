@@ -2,11 +2,13 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import sqlite3 from 'sqlite3';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const siteRoot = path.join(__dirname, 'site');
 const htmlRoot = path.join(__dirname, 'html');
 const port = Number(process.env.PORT || 3002);
+const defaultDatabaseUrl = 'file:./data/tftblog.sqlite';
 
 const contentTypes = new Map([
   ['.html', 'text/html; charset=utf-8'],
@@ -27,6 +29,146 @@ const contentTypes = new Map([
 function send(res, statusCode, body, headers = {}) {
   res.writeHead(statusCode, headers);
   res.end(body);
+}
+
+function sendJson(res, statusCode, data) {
+  send(res, statusCode, JSON.stringify(data), {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  });
+}
+
+function resolveDatabasePath(databaseUrl = process.env.DATABASE_URL || defaultDatabaseUrl) {
+  if (!databaseUrl.startsWith('file:')) {
+    throw new Error('DATABASE_URL must use a file: SQLite URL.');
+  }
+
+  const filePath = databaseUrl.slice('file:'.length);
+  return path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
+}
+
+function openGuideDatabase() {
+  const databasePath = resolveDatabasePath();
+  if (!fs.existsSync(databasePath)) {
+    throw new Error(`Guide database not found: ${databasePath}`);
+  }
+
+  return new sqlite3.Database(databasePath, sqlite3.OPEN_READONLY);
+}
+
+function all(db, sql, params = []) {
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (error, rows) => (error ? reject(error) : resolve(rows)));
+  });
+}
+
+function close(db) {
+  return new Promise((resolve, reject) => {
+    db.close((error) => (error ? reject(error) : resolve()));
+  });
+}
+
+function mapGuideRow(row) {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    excerpt: row.excerpt,
+    contentMarkdown: row.content_markdown,
+    coverUrl: row.cover_url,
+    source: row.source,
+    updatedAt: row.updated_at,
+    publishedAt: row.published_at,
+    status: row.status,
+    readingMinutes: row.reading_minutes,
+    createdAt: row.created_at,
+    modifiedAt: row.modified_at,
+    tags: row.tags ? row.tags.split('\n').filter(Boolean) : [],
+  };
+}
+
+async function selectGuides(db, whereClause = '', params = []) {
+  const rows = await all(
+    db,
+    `
+      SELECT
+        g.id,
+        g.slug,
+        g.title,
+        g.excerpt,
+        g.content_markdown,
+        g.cover_url,
+        g.source,
+        g.updated_at,
+        g.published_at,
+        g.status,
+        g.reading_minutes,
+        g.created_at,
+        g.modified_at,
+        group_concat(t.tag, char(10)) AS tags
+      FROM guides g
+      LEFT JOIN guide_tags t ON t.guide_id = g.id
+      ${whereClause}
+      GROUP BY g.id
+      ORDER BY g.updated_at DESC, g.id DESC
+    `,
+    params,
+  );
+  return rows.map(mapGuideRow);
+}
+
+function guideSummary(guide) {
+  return {
+    slug: guide.slug,
+    title: guide.title,
+    excerpt: guide.excerpt,
+    coverUrl: guide.coverUrl,
+    source: guide.source,
+    updatedAt: guide.updatedAt,
+    publishedAt: guide.publishedAt,
+    readingMinutes: guide.readingMinutes,
+    tags: guide.tags,
+  };
+}
+
+async function handleGuideApi(url, res) {
+  if (url.pathname !== '/api/guides' && !url.pathname.startsWith('/api/guides/')) {
+    return false;
+  }
+
+  let db;
+  try {
+    db = openGuideDatabase();
+
+    if (url.pathname === '/api/guides') {
+      const guides = (await selectGuides(db, "WHERE g.status = 'published'")).map(guideSummary);
+      sendJson(res, 200, { guides });
+      return true;
+    }
+
+    const slug = decodeURIComponent(url.pathname.replace(/^\/api\/guides\/+/, '').replace(/\/+$/, ''));
+    if (!slug || slug.includes('/')) {
+      sendJson(res, 404, { error: 'guide_not_found' });
+      return true;
+    }
+
+    const guide = (await selectGuides(db, "WHERE g.status = 'published' AND g.slug = ?", [slug]))[0];
+    if (!guide) {
+      sendJson(res, 404, { error: 'guide_not_found' });
+      return true;
+    }
+
+    sendJson(res, 200, { guide });
+    return true;
+  } catch (error) {
+    sendJson(res, 500, {
+      error: 'guide_api_error',
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return true;
+  } finally {
+    if (db) await close(db).catch(() => undefined);
+  }
 }
 
 function safePath(root, requestPath) {
@@ -70,14 +212,19 @@ function htmlForRoute(urlPath) {
 
   const guideMatch = route.match(/^\/guides\/([^/]+)$/);
   if (guideMatch) {
-    return path.join(htmlRoot, 'guides', `${guideMatch[1]}.html`);
+    return path.join(htmlRoot, 'guides', '_shell.html');
   }
 
   return path.join(htmlRoot, '_not-found.html');
 }
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+
+  if (await handleGuideApi(url, res)) {
+    return;
+  }
+
   const staticPath = safePath(siteRoot, url.pathname);
 
   if (staticPath && fs.existsSync(staticPath) && fs.statSync(staticPath).isFile()) {

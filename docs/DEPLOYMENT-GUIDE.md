@@ -562,6 +562,12 @@ server {
     location /public {
         proxy_pass http://localhost:3000;
     }
+
+    # 攻略图片上传目录：不进入 Git，也不进入 .deploy 构建包
+    location /uploads/ {
+        alias /var/www/TFTBlog-NEXTJS/uploads/;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
 }
 ```
 
@@ -703,6 +709,17 @@ Nginx: 缓存命中！
 **性能提升：**
 - 响应时间：从 ~50ms 降到 ~1ms
 - Next.js 负载：减少 90%+
+
+#### 6. **攻略上传图片目录**
+
+```nginx
+location /uploads/ {
+    alias /var/www/TFTBlog-NEXTJS/uploads/;
+    add_header Cache-Control "public, max-age=31536000, immutable";
+}
+```
+
+攻略发布脚本会把图片上传到 `/var/www/TFTBlog-NEXTJS/uploads/guides/<slug>/`，页面通过 `/uploads/guides/<slug>/<hash>-<filename>` 访问。这个目录是服务器持久数据，不属于 Git、`public/guides` 或 `.deploy` 静态构建包，需要纳入服务器备份。
 
 ### Nginx 命令常用操作
 

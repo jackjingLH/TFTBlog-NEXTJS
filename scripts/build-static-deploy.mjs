@@ -71,11 +71,9 @@ function copyHtml() {
     copyFile(source, path.join(htmlRoot, targetName));
   }
 
-  for (const slug of guideSlugs()) {
-    const source = path.join(appBuildRoot, 'guides', `${slug}.html`);
-    requireFile(source);
-    copyFile(source, path.join(htmlRoot, 'guides', `${slug}.html`));
-  }
+  const guideShellSource = path.join(appBuildRoot, 'guides', '__guide_shell__.html');
+  requireFile(guideShellSource);
+  copyFile(guideShellSource, path.join(htmlRoot, 'guides', '_shell.html'));
 }
 
 function copyStaticAssets() {
@@ -85,10 +83,6 @@ function copyStaticAssets() {
   }
 
   copyDir(nextStaticRoot, path.join(siteRoot, '_next', 'static'));
-
-  for (const slug of guideSlugs()) {
-    copyDir(path.join(publicRoot, 'guides', slug), path.join(siteRoot, 'guides', slug));
-  }
 
   const favicon = path.join(root, 'app', 'favicon.ico');
   if (fs.existsSync(favicon)) {

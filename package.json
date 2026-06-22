@@ -9,6 +9,11 @@
     "lint": "next lint",
     "import:guide-assets": "node scripts/import-guide-assets.mjs",
     "check:guide-contract": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"moduleResolution\\\":\\\"node\\\"}\" scripts/check-guide-contract.ts",
+    "check:sqlite-contract": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"moduleResolution\\\":\\\"node\\\"}\" scripts/check-sqlite-contract.ts",
+    "check:publish-contract": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"moduleResolution\\\":\\\"node\\\"}\" scripts/check-publish-contract.ts",
+    "check:static-api-contract": "node scripts/check-static-api-contract.mjs",
+    "check:static-shell-contract": "node scripts/check-static-shell-contract.mjs",
+    "publish:guide": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"moduleResolution\\\":\\\"node\\\"}\" scripts/publish-guide.ts",
     "build:static-deploy": "node scripts/build-static-deploy.mjs"
   },
   "dependencies": {
@@ -17,7 +22,8 @@
     "next": "14.2.33",
     "next-auth": "^5.0.0-beta.30",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

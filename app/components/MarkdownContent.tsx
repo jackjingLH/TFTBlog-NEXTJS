@@ -1,9 +1,16 @@
 import Image from 'next/image';
-import { guideAssetPath, slugifyHeading } from '@/lib/guides';
 
 interface MarkdownContentProps {
   content: string;
   slug: string;
+}
+
+function slugifyHeading(text: string) {
+  return text
+    .replace(/[`*_#]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '')
+    .toLowerCase();
 }
 
 function renderInline(text: string) {
@@ -46,7 +53,7 @@ function imageSrc(slug: string, value: string) {
   if (cleanValue.startsWith('..')) {
     return null;
   }
-  return guideAssetPath(slug, cleanValue);
+  return `/guides/${slug}/${encodeURIComponent(cleanValue).replace(/%2F/g, '/')}`;
 }
 
 export default function MarkdownContent({ content, slug }: MarkdownContentProps) {

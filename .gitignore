@@ -43,6 +43,12 @@ logs/
 # deployment
 .deploy
 
+# local content database
+/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
 # claude code local settings
 .claude/
 .mongodb-credentials.txt
