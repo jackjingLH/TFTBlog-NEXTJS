@@ -15,6 +15,7 @@ interface GuideSummary {
   publishedAt: string | null;
   readingMinutes: number;
   tags: string[];
+  pinned?: boolean;
 }
 
 interface GuideDetail extends GuideSummary {
@@ -38,8 +39,15 @@ function GuideCard({ guide }: { guide: GuideSummary }) {
   return (
     <Link
       href={`/guides/${guide.slug}`}
-      className="group block bg-surface border border-border rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-200"
+      className="group block bg-surface border border-border rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-200 relative"
     >
+      {/* Pin Indicator */}
+      {guide.pinned && (
+        <div className="absolute top-3 right-3 z-10 bg-accent text-white px-2 py-1 text-xs rounded-full flex items-center gap-1">
+          📌 置顶
+        </div>
+      )}
+
       {guide.coverUrl && (
         <div className="aspect-video bg-gray-100 overflow-hidden">
           <Image
