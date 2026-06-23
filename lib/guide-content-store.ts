@@ -19,6 +19,8 @@ export interface GuideRecord {
   createdAt: string;
   modifiedAt: string;
   tags: string[];
+  pinned: boolean;
+  pinnedOrder: number | null;
 }
 
 export interface GuideUpsertInput {
@@ -50,6 +52,8 @@ interface GuideRow {
   created_at: string;
   modified_at: string;
   tags: string | null;
+  pinned: number;
+  pinned_order: number | null;
 }
 
 const defaultDatabaseUrl = 'file:./data/tftblog.sqlite';
@@ -99,6 +103,8 @@ function mapGuideRow(row: GuideRow): GuideRecord {
     createdAt: row.created_at,
     modifiedAt: row.modified_at,
     tags: row.tags ? row.tags.split('\n').filter(Boolean) : [],
+    pinned: row.pinned === 1,
+    pinnedOrder: row.pinned_order,
   };
 }
 
@@ -256,12 +262,18 @@ export class GuideContentStore {
         g.reading_minutes,
         g.created_at,
         g.modified_at,
+        g.pinned,
+        g.pinned_order,
         group_concat(t.tag, char(10)) AS tags
       FROM guides g
       LEFT JOIN guide_tags t ON t.guide_id = g.id
       ${whereClause}
       GROUP BY g.id
-      ORDER BY g.updated_at DESC, g.id DESC
+      ORDER BY
+        g.pinned DESC,
+        CASE WHEN g.pinned = 1 THEN g.pinned_order ELSE NULL END ASC,
+        g.updated_at DESC,
+        g.id DESC
     `;
 
     const rows = await this.all<GuideRow>(sql, params);
