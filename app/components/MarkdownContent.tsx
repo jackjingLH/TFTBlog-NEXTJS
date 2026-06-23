@@ -1,8 +1,7 @@
 import Image from 'next/image';
 
 interface MarkdownContentProps {
-  content: string;
-  slug: string;
+  markdown: string;
 }
 
 function slugifyHeading(text: string) {
@@ -19,7 +18,7 @@ function renderInline(text: string) {
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return (
-        <strong key={index} className="font-semibold text-white">
+        <strong key={index} className="font-semibold text-text-primary">
           {part.slice(2, -2)}
         </strong>
       );
@@ -27,7 +26,7 @@ function renderInline(text: string) {
 
     if (part.startsWith('`') && part.endsWith('`')) {
       return (
-        <code key={index} className="break-words rounded bg-white/8 px-1.5 py-0.5 text-[0.92em] text-emerald-200">
+        <code key={index} className="break-words rounded bg-gray-100 px-2 py-0.5 text-sm text-accent font-mono">
           {part.slice(1, -1)}
         </code>
       );
@@ -35,7 +34,7 @@ function renderInline(text: string) {
 
     if (part.startsWith('#')) {
       return (
-        <span key={index} className="mr-1 inline-flex break-words text-[0.92em] text-cyan-200/90">
+        <span key={index} className="mr-1 inline-flex break-words text-sm text-accent">
           {part}
         </span>
       );
@@ -45,31 +44,20 @@ function renderInline(text: string) {
   });
 }
 
-function imageSrc(slug: string, value: string) {
-  const cleanValue = value.split('|')[0].trim();
-  if (/^https?:\/\//.test(cleanValue) || cleanValue.startsWith('/')) {
-    return cleanValue;
-  }
-  if (cleanValue.startsWith('..')) {
-    return null;
-  }
-  return `/guides/${slug}/${encodeURIComponent(cleanValue).replace(/%2F/g, '/')}`;
-}
-
-export default function MarkdownContent({ content, slug }: MarkdownContentProps) {
-  const lines = content
+export default function MarkdownContent({ markdown }: MarkdownContentProps) {
+  const lines = markdown
     .replace(/<!--\s*tft-page:\s*\d+\s*-->/g, '\n---page---\n')
     .split(/\r?\n/);
 
   return (
-    <div className="min-w-0 space-y-5 overflow-hidden text-[16px] leading-8 text-slate-200">
+    <div className="min-w-0 space-y-4 overflow-hidden text-base leading-7 text-text-primary">
       {lines.map((rawLine, index) => {
         const line = rawLine.trim();
 
         if (!line || line === '---') return null;
 
         if (line === '---page---') {
-          return <div key={index} className="h-px w-full bg-white/10" />;
+          return <div key={index} className="h-px w-full bg-border my-8" />;
         }
 
         const heading = line.match(/^(#{1,3})\s+(.+)$/);
@@ -85,10 +73,10 @@ export default function MarkdownContent({ content, slug }: MarkdownContentProps)
               id={id}
               className={
                 level === 1
-                  ? 'break-words pt-2 text-[1.75rem] font-bold leading-tight text-white sm:text-3xl'
+                  ? 'break-words pt-2 text-3xl font-bold leading-tight text-text-primary sm:text-4xl'
                   : level === 2
-                    ? 'scroll-mt-24 break-words pt-5 text-[1.45rem] font-bold leading-tight text-white sm:text-2xl'
-                    : 'scroll-mt-24 break-words pt-3 text-xl font-semibold text-white'
+                    ? 'scroll-mt-24 break-words pt-6 text-2xl font-bold leading-tight text-text-primary'
+                    : 'scroll-mt-24 break-words pt-4 text-xl font-semibold text-text-primary'
               }
             >
               {text}
@@ -98,23 +86,23 @@ export default function MarkdownContent({ content, slug }: MarkdownContentProps)
 
         const obsidianImage = line.match(/^!\[\[([^\]]+)\]\]$/)?.[1];
         const markdownImage = line.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
-        const src = obsidianImage ? imageSrc(slug, obsidianImage) : markdownImage ? imageSrc(slug, markdownImage[2]) : null;
+        const src = obsidianImage || markdownImage?.[2];
 
         if (obsidianImage || markdownImage) {
           const alt = markdownImage?.[1] || obsidianImage || '攻略图片';
 
           if (!src) {
             return (
-              <div key={index} className="rounded-lg border border-dashed border-white/15 bg-white/[0.04] px-4 py-5 text-sm text-slate-400">
+              <div key={index} className="rounded-lg border border-dashed border-border bg-surface px-4 py-5 text-sm text-text-muted">
                 图片待整理：{alt}
               </div>
             );
           }
 
           return (
-            <figure key={index} className="max-w-full overflow-hidden rounded-lg border border-white/10 bg-slate-950">
+            <figure key={index} className="my-6 max-w-full overflow-hidden rounded-lg border border-border bg-surface">
               <Image
-                src={src}
+                src={src.startsWith('http') ? src : src}
                 alt={alt}
                 width={900}
                 height={520}
@@ -129,7 +117,7 @@ export default function MarkdownContent({ content, slug }: MarkdownContentProps)
 
         if (line.startsWith('标签：')) {
           return (
-            <p key={index} className="rounded-lg border border-cyan-300/15 bg-cyan-300/8 px-4 py-3 text-sm leading-6 text-cyan-100">
+            <p key={index} className="rounded-lg border border-accent-light bg-accent-light/30 px-4 py-3 text-sm leading-6 text-text-primary">
               {renderInline(line)}
             </p>
           );
@@ -137,13 +125,13 @@ export default function MarkdownContent({ content, slug }: MarkdownContentProps)
 
         if (line.startsWith('来源：')) {
           return (
-            <p key={index} className="pt-4 text-sm text-slate-500">
+            <p key={index} className="pt-4 text-sm text-text-muted">
               {line}
             </p>
           );
         }
 
-        return <p key={index} className="break-words">{renderInline(line)}</p>;
+        return <p key={index} className="break-words text-text-secondary">{renderInline(line)}</p>;
       })}
     </div>
   );

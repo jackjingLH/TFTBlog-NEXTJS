@@ -28,27 +28,26 @@ export const metadata = {
 
 export default function DataPage() {
   return (
-    <main className="min-h-screen bg-[#090d12] text-white">
-      <section className="border-b border-white/10 bg-[#0d141b] px-4 py-7 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-background">
+      <section className="border-b border-border bg-surface px-4 py-8">
         <div className="mx-auto max-w-6xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">Data</p>
-          <h1 className="mt-2 text-3xl font-bold leading-tight sm:text-4xl">资料查询</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
+          <h1 className="text-3xl font-bold text-text-primary">资料查询</h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-text-secondary">
             初版先保留轻入口，后续逐步接英雄、羁绊、装备、强化符文数据，不做高操作量工具。
           </p>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-3 px-4 py-6 sm:grid-cols-2 sm:px-6 lg:px-8">
+      <section className="mx-auto grid max-w-6xl gap-4 px-4 py-8 sm:grid-cols-2">
         {dataSections.map((section) => (
-          <article key={section.title} className="rounded-lg border border-white/10 bg-white/[0.04] p-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-bold text-white">{section.title}</h2>
-              <span className="rounded border border-amber-200/20 bg-amber-200/10 px-2 py-1 text-xs text-amber-100">
+          <article key={section.title} className="rounded-lg border border-border bg-surface p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <h2 className="text-2xl font-bold text-text-primary">{section.title}</h2>
+              <span className="rounded-full border border-accent/20 bg-accent-light px-3 py-1 text-xs text-accent font-medium">
                 {section.status}
               </span>
             </div>
-            <p className="mt-3 text-sm leading-6 text-slate-400">{section.body}</p>
+            <p className="text-sm leading-6 text-text-secondary">{section.body}</p>
           </article>
         ))}
       </section>

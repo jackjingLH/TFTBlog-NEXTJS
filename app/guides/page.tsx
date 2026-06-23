@@ -1,4 +1,4 @@
-import { GuidesListShell } from '../components/GuideShells';
+import { GuideListShell } from '../components/GuideShells';
 
 export const metadata = {
   title: '攻略 - 铲什么铲',
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function GuidesPage() {
-  return <GuidesListShell />;
+  return <GuideListShell />;
 }
