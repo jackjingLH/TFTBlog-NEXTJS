@@ -141,6 +141,24 @@ export class GuideContentStore {
       CREATE INDEX IF NOT EXISTS idx_guides_status_updated
         ON guides(status, updated_at DESC);
     `);
+
+    // Migration: Add pinning fields if they don't exist
+    await this.migratePinningFields();
+  }
+
+  private async migratePinningFields() {
+    // Check if pinned column exists
+    const columns = await this.all<{ name: string }>('PRAGMA table_info(guides)');
+    const hasPinned = columns.some(col => col.name === 'pinned');
+    const hasPinnedOrder = columns.some(col => col.name === 'pinned_order');
+
+    if (!hasPinned) {
+      await this.exec('ALTER TABLE guides ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0');
+    }
+
+    if (!hasPinnedOrder) {
+      await this.exec('ALTER TABLE guides ADD COLUMN pinned_order INTEGER');
+    }
   }
 
   close() {
