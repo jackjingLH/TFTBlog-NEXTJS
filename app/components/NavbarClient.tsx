@@ -25,8 +25,7 @@ export default function NavbarClient() {
         <div className="flex justify-between items-center h-16">
           <Link
             href="/"
-            className="text-xl font-bold bg-clip-text text-transparent"
-            style={{ backgroundImage: 'linear-gradient(135deg, #A78BFA 0%, #7C3AED 50%, #F43F5E 100%)' }}
+            className="text-xl font-bold text-text-primary hover:text-accent transition-colors"
           >
             铲什么铲
           </Link>
@@ -36,22 +35,22 @@ export default function NavbarClient() {
               <Link
                 key={href}
                 href={href}
-                className="relative text-textLight-200 hover:text-primary-400 transition-colors duration-200 group"
+                className={`relative py-3 min-h-[44px] flex items-center transition-colors duration-200 ${
+                  isActive(href)
+                    ? 'text-accent font-medium'
+                    : 'text-text-secondary hover:text-text-primary'
+                }`}
               >
                 {label}
-                <span
-                  className={`absolute -bottom-0.5 left-0 h-0.5 transition-all duration-300 group-hover:w-full ${isActive(href) ? 'w-full' : 'w-0'}`}
-                  style={{
-                    background: 'linear-gradient(90deg, #7C3AED, #F43F5E)',
-                    boxShadow: '0 0 6px rgba(124, 58, 237, 0.8)',
-                  }}
-                />
+                {isActive(href) && (
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-accent" />
+                )}
               </Link>
             ))}
           </div>
 
           <button
-            className="sm:hidden p-2 rounded-lg text-textLight-200 hover:text-primary-400 transition-colors"
+            className="sm:hidden p-2 rounded-lg text-text-secondary hover:text-accent transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -69,27 +68,18 @@ export default function NavbarClient() {
       </div>
 
       {mobileMenuOpen && (
-        <div
-          className="sm:hidden"
-          style={{
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            background: 'rgba(15, 15, 35, 0.97)',
-            borderTop: '1px solid rgba(124, 58, 237, 0.2)',
-          }}
-        >
+        <div className="sm:hidden bg-surface border-t border-border">
           <div className="px-4 py-3 space-y-1">
             {navLinks.map(({ href, label }) => (
               <Link
                 key={href}
                 href={href}
                 onClick={() => setMobileMenuOpen(false)}
-                className="block px-4 py-3 rounded-lg text-base font-medium transition-all duration-150"
-                style={{
-                  color: isActive(href) ? '#A78BFA' : '#B4B4C5',
-                  background: isActive(href) ? 'rgba(124, 58, 237, 0.12)' : 'transparent',
-                  borderLeft: isActive(href) ? '3px solid #7C3AED' : '3px solid transparent',
-                }}
+                className={`block px-4 py-3 rounded-lg text-base font-medium transition-colors ${
+                  isActive(href)
+                    ? 'text-accent bg-accent-light border-l-4 border-accent'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-surface'
+                }`}
               >
                 {label}
               </Link>
