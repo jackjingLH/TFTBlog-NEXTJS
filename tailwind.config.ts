@@ -9,33 +9,21 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
-        // 主强调色 - 霓虹紫系
-        primary: {
-          400: '#A78BFA', // 紫色浅
-          500: '#7C3AED', // 霓虹紫主色
-          600: '#6D28D9', // 紫色深
-        },
-        // 深色背景系
-        bgDark: {
-          500: '#2D2B6F', // 最浅元素
-          600: '#1E1B4B', // 次要元素背景
-          700: '#16213E', // 卡片背景
-          800: '#0F0F23', // 主背景（更深更蓝）
-        },
-        // 浅色文字系
-        textLight: {
-          100: '#FFFFFF', // 主文字
-          200: '#B4B4C5', // 次文字
-          300: '#7E7E8F', // 辅助文字
-        },
-        // 边框色
-        border: '#3730A3', // 带紫色调边框
-        // 玫红 CTA 色
+        // Semantic color tokens for AI Hero style
+        background: '#FFFFFF',        // Pure white main background
+        surface: '#F9FAFB',           // Light gray for card surfaces
+        border: '#E5E7EB',            // Neutral gray for borders
+
+        // Text colors
+        'text-primary': '#111827',    // Near-black for main text
+        'text-secondary': '#6B7280',  // Mid-gray for secondary text
+        'text-muted': '#9CA3AF',      // Light gray for muted text
+
+        // Accent colors (subdued blue-purple)
         accent: {
-          500: '#F43F5E',
-          600: '#E11D48',
+          DEFAULT: '#6366F1',         // Indigo for interactive elements
+          hover: '#4F46E5',           // Darker on hover
+          light: '#E0E7FF',           // Light tint for backgrounds
         },
       },
     },
