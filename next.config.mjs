@@ -1,5 +1,23 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async rewrites() {
+    if (process.env.NODE_ENV === 'production' || process.env.USE_REMOTE_GUIDE_API !== '1') {
+      return [];
+    }
+
+    return {
+      beforeFiles: [
+        {
+          source: '/api/guides/:path*',
+          destination: 'https://www.jingcc.cc/api/guides/:path*',
+        },
+        {
+          source: '/uploads/:path*',
+          destination: 'https://www.jingcc.cc/uploads/:path*',
+        },
+      ],
+    };
+  },
   webpack: (config, { isServer, dev }) => {
     if (!isServer) {
       config.resolve.fallback = {

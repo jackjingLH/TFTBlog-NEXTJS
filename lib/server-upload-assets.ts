@@ -61,17 +61,27 @@ export function hashFile(filePath: string) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex').slice(0, 12);
 }
 
-export function buildGuideImageObjectKey(slug: string, filePath: string, publicName = path.basename(filePath)) {
+function guideUploadSlugSegment(slug: string) {
+  if (!slug.trim()) {
+    throw new Error('Guide slug is required for upload object key.');
+  }
+
   const cleanSlug = sanitizePathSegment(slug);
+  if (cleanSlug === slug.toLowerCase()) {
+    return cleanSlug;
+  }
+
+  const slugHash = crypto.createHash('sha256').update(slug).digest('hex').slice(0, 8);
+  return cleanSlug ? `guide-${slugHash}-${cleanSlug}` : `guide-${slugHash}`;
+}
+
+export function buildGuideImageObjectKey(slug: string, filePath: string, publicName = path.basename(filePath)) {
+  const cleanSlug = guideUploadSlugSegment(slug);
   const ext = path.extname(publicName);
   const baseName = sanitizePathSegment(path.basename(publicName, ext)) || 'image';
   const cleanExt = sanitizePathSegment(ext.replace(/^\./, ''));
   const hash = hashFile(filePath);
   const filename = cleanExt ? `${hash}-${baseName}.${cleanExt}` : `${hash}-${baseName}`;
-
-  if (!cleanSlug) {
-    throw new Error('Guide slug is required for upload object key.');
-  }
 
   return `guides/${cleanSlug}/${filename}`;
 }

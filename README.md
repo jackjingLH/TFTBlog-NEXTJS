@@ -21,14 +21,14 @@ npm run start
 
 ## 当前范围
 
-- 首页占位页
-- NextAuth 登录
-- MongoDB/Mongoose 用户模型
-- `public/guides` 静态攻略素材
+- 首页、攻略和资料页
+- SQLite 运行时内容数据库
+- Obsidian Markdown 攻略发布链路
+- `/uploads/guides` 持久化攻略素材
 
 ## 配置
 
-复制 `.env.example` 为 `.env.local`，按需配置 MongoDB、NextAuth 和 GitHub OAuth。
+复制 `.env.example` 为 `.env.local`，按需配置 SQLite 路径和发布目标。
 
 敏感文件不要提交到 Git。
 

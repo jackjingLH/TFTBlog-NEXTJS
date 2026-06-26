@@ -10,6 +10,6 @@ export function generateMetadata() {
   };
 }
 
-export default function GuideDetailPage() {
-  return <GuideDetailShell />;
+export default function GuideDetailPage({ params }: { params: { slug: string } }) {
+  return <GuideDetailShell slug={params.slug} />;
 }

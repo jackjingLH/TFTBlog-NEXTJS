@@ -44,7 +44,9 @@ async function seedDatabase() {
       status TEXT NOT NULL DEFAULT 'published',
       reading_minutes INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL,
-      modified_at TEXT NOT NULL
+      modified_at TEXT NOT NULL,
+      pinned INTEGER NOT NULL DEFAULT 0,
+      pinned_order INTEGER
     );
     CREATE TABLE guide_tags (
       guide_id INTEGER NOT NULL,
@@ -57,17 +59,34 @@ async function seedDatabase() {
   await run(db, `
     INSERT INTO guides (
       slug, title, excerpt, content_markdown, cover_url, source,
-      updated_at, published_at, status, reading_minutes, created_at, modified_at
+      updated_at, published_at, status, reading_minutes, created_at, modified_at,
+      pinned, pinned_order
     )
     VALUES (
       'api-guide', 'API 契约攻略', 'API 摘要', '# API 契约攻略',
       'https://cdn.example.com/guides/api/cover.png', 'contract',
-      '2026-06-09', ?, 'published', 2, ?, ?
+      '2026-06-09', ?, 'published', 2, ?, ?,
+      0, NULL
+    )
+  `, [now, now, now]);
+
+  await run(db, `
+    INSERT INTO guides (
+      slug, title, excerpt, content_markdown, cover_url, source,
+      updated_at, published_at, status, reading_minutes, created_at, modified_at,
+      pinned, pinned_order
+    )
+    VALUES (
+      'pinned-guide', '置顶攻略', '置顶摘要', '# 置顶攻略',
+      'https://cdn.example.com/guides/pinned/cover.png', 'contract',
+      '2026-06-01', ?, 'published', 1, ?, ?,
+      1, 1
     )
   `, [now, now, now]);
 
   await run(db, 'INSERT INTO guide_tags (guide_id, tag) VALUES (1, ?)', ['API']);
   await run(db, 'INSERT INTO guide_tags (guide_id, tag) VALUES (1, ?)', ['SQLite']);
+  await run(db, 'INSERT INTO guide_tags (guide_id, tag) VALUES (2, ?)', ['置顶']);
   await close(db);
 }
 
@@ -143,7 +162,7 @@ async function main() {
     await waitForServer(child);
 
     const list = await requestJson('/api/guides');
-    if (list.statusCode !== 200 || list.body.guides?.[0]?.slug !== 'api-guide') {
+    if (list.statusCode !== 200 || list.body.guides?.[0]?.slug !== 'pinned-guide' || list.body.guides?.[0]?.pinned !== true) {
       throw new Error(`Invalid /api/guides response: ${JSON.stringify(list)}`);
     }
 

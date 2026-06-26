@@ -79,7 +79,7 @@ async function initialize(db) {
 }
 
 function assertPayload(payload) {
-  const required = ['slug', 'title', 'excerpt', 'contentMarkdown', 'coverUrl', 'source', 'updatedAt', 'readingMinutes'];
+  const required = ['slug', 'title', 'excerpt', 'contentMarkdown', 'source', 'updatedAt', 'readingMinutes'];
   const missing = required.filter((key) => !payload[key]);
   if (missing.length > 0) {
     throw new Error(`Guide payload missing required fields: ${missing.join(', ')}`);

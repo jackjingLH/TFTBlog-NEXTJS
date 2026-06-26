@@ -32,7 +32,7 @@ interface GuideContractValidation {
 
 const guidesRoot = path.join(process.cwd(), 'content', 'guides');
 const publicGuidesRoot = path.join(process.cwd(), 'public', 'guides');
-const requiredContractFields = ['title', 'tags', 'cover', 'source', 'updatedAt'] as const;
+const requiredContractFields = ['title', 'tags', 'source', 'updatedAt'] as const;
 
 function stripFrontmatter(raw: string) {
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
@@ -126,7 +126,8 @@ function parseGuideContract(raw: string): { body: string; metadata: GuideContrac
 
   const title = readStringField(values, 'title', errors);
   const tags = readTags(values, errors);
-  const cover = normalizeAssetRef(readStringField(values, 'cover', errors));
+  const coverValue = values.get('cover');
+  const cover = typeof coverValue === 'string' && coverValue.trim() ? normalizeAssetRef(coverValue.trim()) : '';
   const source = readStringField(values, 'source', errors);
   const updatedAt = readStringField(values, 'updatedAt', errors);
 

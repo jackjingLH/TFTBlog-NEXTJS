@@ -3,6 +3,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sqlite3 from 'sqlite3';
+import { listDataReferences } from '../lib/data-reference-store.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const siteRoot = path.join(__dirname, 'site');
@@ -68,6 +69,10 @@ function close(db) {
   });
 }
 
+async function tableColumns(db, tableName) {
+  return all(db, `PRAGMA table_info(${tableName})`);
+}
+
 function mapGuideRow(row) {
   return {
     id: row.id,
@@ -84,10 +89,17 @@ function mapGuideRow(row) {
     createdAt: row.created_at,
     modifiedAt: row.modified_at,
     tags: row.tags ? row.tags.split('\n').filter(Boolean) : [],
+    pinned: row.pinned === 1,
+    pinnedOrder: row.pinned_order,
   };
 }
 
 async function selectGuides(db, whereClause = '', params = []) {
+  const columns = await tableColumns(db, 'guides');
+  const columnNames = new Set(columns.map((column) => column.name));
+  const pinnedSelect = columnNames.has('pinned') ? 'g.pinned' : '0';
+  const pinnedOrderSelect = columnNames.has('pinned_order') ? 'g.pinned_order' : 'NULL';
+
   const rows = await all(
     db,
     `
@@ -105,12 +117,18 @@ async function selectGuides(db, whereClause = '', params = []) {
         g.reading_minutes,
         g.created_at,
         g.modified_at,
+        ${pinnedSelect} AS pinned,
+        ${pinnedOrderSelect} AS pinned_order,
         group_concat(t.tag, char(10)) AS tags
       FROM guides g
       LEFT JOIN guide_tags t ON t.guide_id = g.id
       ${whereClause}
       GROUP BY g.id
-      ORDER BY g.updated_at DESC, g.id DESC
+      ORDER BY
+        pinned DESC,
+        CASE WHEN pinned = 1 THEN pinned_order ELSE NULL END ASC,
+        g.updated_at DESC,
+        g.id DESC
     `,
     params,
   );
@@ -128,6 +146,7 @@ function guideSummary(guide) {
     publishedAt: guide.publishedAt,
     readingMinutes: guide.readingMinutes,
     tags: guide.tags,
+    pinned: guide.pinned,
   };
 }
 
@@ -141,8 +160,28 @@ async function handleGuideApi(url, res) {
     db = openGuideDatabase();
 
     if (url.pathname === '/api/guides') {
-      const guides = (await selectGuides(db, "WHERE g.status = 'published'")).map(guideSummary);
-      sendJson(res, 200, { guides });
+      const allGuides = (await selectGuides(db, "WHERE g.status = 'published'")).map(guideSummary);
+
+      // Parse pagination params
+      const page = parseInt(url.searchParams.get('page') || '1', 10);
+      const limit = parseInt(url.searchParams.get('limit') || '12', 10);
+
+      // Calculate pagination
+      const total = allGuides.length;
+      const totalPages = Math.ceil(total / limit);
+      const offset = (page - 1) * limit;
+      const guides = allGuides.slice(offset, offset + limit);
+
+      sendJson(res, 200, {
+        guides,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasMore: page < totalPages,
+        },
+      });
       return true;
     }
 
@@ -168,6 +207,27 @@ async function handleGuideApi(url, res) {
     return true;
   } finally {
     if (db) await close(db).catch(() => undefined);
+  }
+}
+
+async function handleDataApi(url, res) {
+  if (url.pathname !== '/api/data') {
+    return false;
+  }
+
+  try {
+    const body = await listDataReferences({
+      type: url.searchParams.get('type'),
+      q: url.searchParams.get('q'),
+    });
+    sendJson(res, 200, body);
+    return true;
+  } catch (error) {
+    sendJson(res, 500, {
+      error: 'data_api_error',
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return true;
   }
 }
 
@@ -208,7 +268,6 @@ function htmlForRoute(urlPath) {
   if (route === '/') return path.join(htmlRoot, 'index.html');
   if (route === '/data') return path.join(htmlRoot, 'data.html');
   if (route === '/guides') return path.join(htmlRoot, 'guides.html');
-  if (route === '/login') return path.join(htmlRoot, 'login.html');
 
   const guideMatch = route.match(/^\/guides\/([^/]+)$/);
   if (guideMatch) {
@@ -222,6 +281,10 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
 
   if (await handleGuideApi(url, res)) {
+    return;
+  }
+
+  if (await handleDataApi(url, res)) {
     return;
   }
 

@@ -26,8 +26,20 @@ const config: Config = {
           light: '#E0E7FF',           // Light tint for backgrounds
         },
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            'strong': {
+              color: '#EA580C !important',
+              fontWeight: '600',
+            },
+          },
+        },
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/typography'),
+  ],
 };
 export default config;

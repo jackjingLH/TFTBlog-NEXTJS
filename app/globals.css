@@ -12,3 +12,9 @@ body {
     text-wrap: balance;
   }
 }
+
+/* Prose typography customization */
+.prose strong {
+  color: #EA580C;
+  font-weight: 600;
+}

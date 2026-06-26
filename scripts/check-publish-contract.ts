@@ -9,6 +9,8 @@ const dbPath = path.join(tempRoot, 'content.sqlite');
 const guideDir = path.join(tempRoot, 'contract-guide');
 const attachmentDir = path.join(tempRoot, 'attachments');
 const markdownPath = path.join(guideDir, 'TFT.md');
+const looseMarkdownPath = path.join(tempRoot, '91 - 锤石的神秘战利品.md');
+const chineseImageMarkdownPath = path.join(tempRoot, '90 - 奥瑞利安·索尔.md');
 
 fs.mkdirSync(guideDir, { recursive: true });
 fs.mkdirSync(attachmentDir, { recursive: true });
@@ -111,6 +113,66 @@ async function main() {
 
     if (!missingFailed) {
       throw new Error('Missing image did not fail before writing SQLite.');
+    }
+
+    fs.writeFileSync(
+      looseMarkdownPath,
+      `# 锤石的神秘战利品
+
+| 概率 | 奖励 |
+|---|---|
+| 22.5% | 4金币 + 1个3费英雄 |
+
+来源：tftips
+`,
+    );
+
+    const loose = await prepareGuidePublishPayload({
+      markdownPath: looseMarkdownPath,
+      dryRun: true,
+      localOnly: false,
+      assetRoots: [attachmentDir],
+    });
+
+    if (
+      loose.slug !== '锤石的神秘战利品' ||
+      loose.payload.title !== '锤石的神秘战利品' ||
+      loose.payload.source !== 'tftips' ||
+      loose.payload.coverUrl !== null ||
+      loose.payload.tags?.[0] !== '锤石的神秘战利品'
+    ) {
+      throw new Error(`Loose Obsidian guide metadata was not inferred correctly: ${JSON.stringify(loose.payload)}`);
+    }
+
+    fs.writeFileSync(
+      chineseImageMarkdownPath,
+      `---
+tags:
+  - 法系阵容
+cover: cover.png
+---
+
+# 奥瑞利安·索尔
+
+封面：![[cover.png]]
+
+来源：tftips
+`,
+    );
+
+    const chineseImage = await prepareGuidePublishPayload({
+      markdownPath: chineseImageMarkdownPath,
+      dryRun: true,
+      localOnly: false,
+      assetRoots: [attachmentDir],
+    });
+
+    if (
+      chineseImage.slug !== '奥瑞利安-索尔' ||
+      !chineseImage.imageUploads[0]?.objectKey.startsWith('guides/guide-') ||
+      !chineseImage.payload.coverUrl?.startsWith('/uploads/guides/guide-')
+    ) {
+      throw new Error(`Chinese guide image upload path was not made stable: ${JSON.stringify(chineseImage)}`);
     }
 
     console.log('Guide publish contract check passed.');

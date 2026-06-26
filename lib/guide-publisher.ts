@@ -6,7 +6,7 @@ import { readServerUploadConfig, ServerUploadConfig, uploadGuideImage } from './
 interface ParsedFrontmatter {
   title: string;
   tags: string[];
-  cover: string;
+  cover: string | null;
   source: string;
   updatedAt: string;
   slug?: string;
@@ -31,7 +31,10 @@ const imageExtensions = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif', '.avi
 function stripFrontmatter(raw: string) {
   const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
   if (!match) {
-    throw new Error('Guide Markdown is missing YAML frontmatter block.');
+    return {
+      frontmatter: '',
+      body: raw,
+    };
   }
 
   return {
@@ -46,7 +49,56 @@ function unquote(value: string) {
   return quoted ? quoted[1].trim() : trimmed;
 }
 
-function parseFrontmatter(frontmatter: string): ParsedFrontmatter {
+function splitTagLine(value: string) {
+  return value
+    .split(/[\/,，、]+/g)
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function formatDateOnly(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function inferTitle(markdownPath: string, body: string) {
+  const heading = body.match(/^#\s+(.+?)\s*$/m)?.[1]?.trim();
+  if (heading) return heading;
+
+  return path
+    .basename(markdownPath, path.extname(markdownPath))
+    .replace(/^\d+\s*-\s*/, '')
+    .trim();
+}
+
+function inferSource(body: string) {
+  return body.match(/^来源[:：]\s*(.+?)\s*$/im)?.[1]?.trim() || 'unknown';
+}
+
+function inferTags(body: string, title: string) {
+  const tagLine = body.match(/^标签[:：]\s*(.+?)\s*$/im)?.[1];
+  const tags = tagLine ? splitTagLine(tagLine) : [];
+  return tags.length > 0 ? tags : [title];
+}
+
+function inferCover(body: string) {
+  const coverLine = body.match(/^封面[:：]\s*(.+?)\s*$/im)?.[1];
+  if (coverLine && isImageRef(coverLine)) return cleanAssetRef(coverLine);
+
+  const obsidian = body.match(/!\[\[([^\]]+)\]\]/)?.[1];
+  if (obsidian && isImageRef(obsidian)) return cleanAssetRef(obsidian);
+
+  const markdown = body.match(/!\[[^\]]*]\(([^)]+)\)/)?.[1];
+  if (markdown && !/^https?:\/\//.test(markdown) && !markdown.startsWith('/') && isImageRef(markdown)) {
+    return cleanAssetRef(markdown);
+  }
+
+  return null;
+}
+
+function parseFrontmatter(frontmatter: string, body: string, markdownPath: string): ParsedFrontmatter {
   const values = new Map<string, string | string[]>();
   let currentListKey: string | null = null;
 
@@ -76,35 +128,31 @@ function parseFrontmatter(frontmatter: string): ParsedFrontmatter {
     }
   }
 
-  const errors: string[] = [];
   const readString = (key: string) => {
     const value = values.get(key);
-    if (typeof value !== 'string' || !value.trim()) {
-      errors.push(`missing required frontmatter field: ${key}`);
-      return '';
-    }
-    return value.trim();
+    return typeof value === 'string' ? value.trim() : '';
   };
 
-  const tags = values.get('tags');
-  if (!Array.isArray(tags) || tags.length === 0) {
-    errors.push('missing required frontmatter field: tags');
-  }
+  const title = readString('title') || inferTitle(markdownPath, body);
+  const tagValue = values.get('tags');
+  const tags = Array.isArray(tagValue)
+    ? tagValue.map((tag) => tag.trim()).filter(Boolean)
+    : typeof tagValue === 'string' && tagValue.trim()
+      ? splitTagLine(tagValue)
+      : inferTags(body, title);
+  const cover = readString('cover') ? cleanAssetRef(readString('cover')) : inferCover(body);
+  const source = readString('source') || inferSource(body);
+  const updatedAt = readString('updatedAt') || formatDateOnly(fs.statSync(markdownPath).mtime);
 
-  const updatedAt = readString('updatedAt');
   if (updatedAt && !/^\d{4}-\d{2}-\d{2}$/.test(updatedAt)) {
-    errors.push('frontmatter updatedAt must use YYYY-MM-DD');
-  }
-
-  if (errors.length > 0) {
-    throw new Error(`Invalid guide frontmatter: ${Array.from(new Set(errors)).join('; ')}`);
+    throw new Error('Invalid guide frontmatter: updatedAt must use YYYY-MM-DD');
   }
 
   return {
-    title: readString('title'),
-    tags: (tags as string[]).map((tag) => tag.trim()).filter(Boolean),
-    cover: cleanAssetRef(readString('cover')),
-    source: readString('source'),
+    title,
+    tags,
+    cover,
+    source,
     updatedAt,
     slug: typeof values.get('slug') === 'string' ? (values.get('slug') as string).trim() : undefined,
   };
@@ -126,7 +174,7 @@ function inferSlug(markdownPath: string, metadata: ParsedFrontmatter) {
     return slugify(parent);
   }
 
-  return slugify(path.basename(markdownPath, path.extname(markdownPath)) || metadata.title);
+  return slugify(metadata.title || path.basename(markdownPath, path.extname(markdownPath)));
 }
 
 function cleanAssetRef(value: string) {
@@ -145,7 +193,7 @@ function isImageRef(value: string) {
   return imageExtensions.has(path.extname(cleanAssetRef(value)).toLowerCase());
 }
 
-function extractImageRefs(markdown: string, cover: string) {
+function extractImageRefs(markdown: string, cover: string | null) {
   const refs = new Set<string>();
   if (cover && isImageRef(cover)) refs.add(cleanAssetRef(cover));
 
@@ -191,6 +239,24 @@ function findAssetFile(assetName: string, roots: string[]) {
   return null;
 }
 
+function publicGuideAssetUrl(slug: string, filePath: string) {
+  const publicGuideRoot = path.join(process.cwd(), 'public', 'guides', slug);
+  const relativePath = path.relative(publicGuideRoot, filePath);
+
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+    return null;
+  }
+
+  const encodedSlug = encodeURIComponent(slug);
+  const encodedAssetPath = relativePath
+    .split(path.sep)
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(part))
+    .join('/');
+
+  return `/guides/${encodedSlug}/${encodedAssetPath}`;
+}
+
 function getExcerpt(markdown: string) {
   const cleaned = markdown
     .replace(/<!--[\s\S]*?-->/g, '')
@@ -229,7 +295,7 @@ export async function prepareGuidePublishPayload(options: PublishGuideOptions): 
 
   const raw = fs.readFileSync(markdownPath, 'utf8');
   const { frontmatter, body } = stripFrontmatter(raw);
-  const metadata = parseFrontmatter(frontmatter);
+  const metadata = parseFrontmatter(frontmatter, body, markdownPath);
   const slug = inferSlug(markdownPath, metadata);
   const assetRoots = [
     path.dirname(markdownPath),
@@ -247,20 +313,45 @@ export async function prepareGuidePublishPayload(options: PublishGuideOptions): 
       throw new Error(`Guide image not found: ${ref}. Searched: ${assetRoots.join('; ')}`);
     }
 
-    const upload = await uploadGuideImage(uploadConfig, {
-      slug,
-      filePath,
-      publicName: ref,
-      dryRun: options.dryRun,
-    });
+    // In localOnly mode, copy image to public/guides/<slug>/ if not already there
+    let targetFilePath = filePath;
+    if (options.localOnly) {
+      const publicGuideDir = path.join(process.cwd(), 'public', 'guides', slug);
+      const targetPath = path.join(publicGuideDir, path.basename(filePath));
+
+      if (!fs.existsSync(publicGuideDir)) {
+        fs.mkdirSync(publicGuideDir, { recursive: true });
+      }
+
+      if (!fs.existsSync(targetPath)) {
+        fs.copyFileSync(filePath, targetPath);
+      }
+
+      targetFilePath = targetPath;
+    }
+
+    const localPublicUrl = options.localOnly ? publicGuideAssetUrl(slug, targetFilePath) : null;
+    const upload = localPublicUrl
+      ? {
+          objectKey: `guides/${slug}/${ref}`,
+          publicUrl: localPublicUrl,
+          size: fs.statSync(targetFilePath).size,
+          hash: '',
+        }
+      : await uploadGuideImage(uploadConfig, {
+          slug,
+          filePath,
+          publicName: ref,
+          dryRun: options.dryRun,
+        });
 
     uploadedUrls.set(ref, upload.publicUrl);
     imageUploads.push({ ref, filePath, objectKey: upload.objectKey, publicUrl: upload.publicUrl, dryRun: Boolean(options.dryRun) });
   }
 
   const contentMarkdown = replaceImageRefs(body, uploadedUrls).trim();
-  const coverUrl = uploadedUrls.get(metadata.cover) || null;
-  if (!coverUrl) {
+  const coverUrl = metadata.cover ? uploadedUrls.get(metadata.cover) || null : null;
+  if (metadata.cover && !coverUrl) {
     throw new Error(`Guide cover was not uploaded or resolved: ${metadata.cover}`);
   }
 

@@ -257,7 +257,7 @@ module.exports = {
     env: {
       NODE_ENV: 'production',
       PORT: 3000,
-      MONGODB_URI: 'mongodb://47.99.202.3:27017/tftblog'
+      DATABASE_URL: 'file:./data/tftblog.sqlite'
     },
 
     // 开发环境变量
@@ -1011,11 +1011,11 @@ pm2 logs tftblog-nextjs --lines 100
 # 检查错误日志
 tail -f /var/log/pm2/tftblog-error.log
 
-# 3. 数据库连接失败
-# 测试 MongoDB
-mongo mongodb://47.99.202.3:27017/tftblog --eval "db.stats()"
-# 查看 MongoDB 日志
-tail -f /www/server/mongodb/log/mongodb.log
+# 3. 内容数据库异常
+# 检查 SQLite 文件是否存在
+ls -lh /var/www/TFTBlog-NEXTJS/data/tftblog.sqlite
+# 检查运行时 API
+curl -fsS http://127.0.0.1:3002/api/guides
 
 # 4. 构建失败
 # 清除缓存重新构建

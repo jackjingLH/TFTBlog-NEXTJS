@@ -29,7 +29,6 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
-        MONGODB_URI: process.env.MONGODB_URI || 'mongodb://47.99.202.3:27017/tftblog',
       },
       error_file: './logs/err.log',
       out_file: './logs/out.log',

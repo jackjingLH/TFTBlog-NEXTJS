@@ -158,11 +158,6 @@ PUBLISH_UPLOADS_DIR=/var/www/TFTBlog-NEXTJS/uploads
 PUBLISH_UPLOADS_PUBLIC_BASE=/uploads
 ```
 
-**MongoDB (legacy, for RSS aggregation only):**
-```env
-MONGODB_URI=mongodb://47.99.202.3:27017/tftblog
-```
-
 ## File Management Rules
 
 **Never create duplicate files for the same purpose:**

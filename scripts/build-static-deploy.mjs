@@ -61,7 +61,6 @@ function copyHtml() {
     ['index.html', 'index.html'],
     ['data.html', 'data.html'],
     ['guides.html', 'guides.html'],
-    ['login.html', 'login.html'],
     ['_not-found.html', '_not-found.html'],
   ];
 
@@ -98,6 +97,7 @@ function main() {
   copyHtml();
   copyStaticAssets();
   copyFile(path.join(root, 'scripts', 'static-mvp-server.mjs'), path.join(outputRoot, 'server.mjs'));
+  copyFile(path.join(root, 'lib', 'data-reference-store.mjs'), path.join(root, '.deploy', 'lib', 'data-reference-store.mjs'));
 
   console.log(`Static deploy bundle created: ${outputRoot}`);
   console.log(`Guide routes: ${guideSlugs().join(', ')}`);
