@@ -99,6 +99,20 @@ function comparableText(value) {
   return String(value || '').replace(/\s+/g, '');
 }
 
+function normalizeSkillText(value) {
+  return normalizeInlineIconPlaceholders(value)
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/@TFTUnitProperty[^@]*@/g, '')
+    .replace(/\*/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/[ \t]*\n[ \t]*/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/[ \t]+([，。；：！？、）】%])/g, '$1')
+    .replace(/([（【])[ \t]+/g, '$1')
+    .trim();
+}
+
 function parseTraitLevels(levels) {
   if (!levels || typeof levels !== 'object' || Array.isArray(levels)) {
     return [];
@@ -133,7 +147,13 @@ function parseOfficialPayloadRows(rawPayloadRows) {
       continue;
     }
 
-    const payloadItems = Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : [];
+    const payloadItems = Array.isArray(body)
+      ? body
+      : Array.isArray(body?.data)
+        ? body.data
+        : body?.data && typeof body.data === 'object'
+          ? Object.values(body.data)
+          : [];
     values.push(...payloadItems);
   }
 
@@ -332,10 +352,170 @@ async function applyItemMetadata(db) {
   return unresolvedFormulaMaterials;
 }
 
+function extractAugmentEffectAndRules(description) {
+  return extractItemEffectAndRules(description);
+}
+
+function augmentMetadataKeys(augment) {
+  return [augment.hexId, augment.id, augment.name].map(String).filter(Boolean);
+}
+
+function collectAugmentMetadata(rawPayloadRows) {
+  const metadata = new Map();
+
+  for (const augment of parseOfficialPayloadRows(rawPayloadRows)) {
+    const { effectText, rules } = extractAugmentEffectAndRules(augment.description);
+    const value = {
+      effectText,
+      rulesJson: JSON.stringify(rules),
+    };
+    for (const key of augmentMetadataKeys(augment)) {
+      metadata.set(key, value);
+    }
+  }
+
+  return metadata;
+}
+
+async function applyAugmentMetadata(db) {
+  if (!(await tableExists(db, 'raw_payloads', 'source_assets'))) {
+    return;
+  }
+
+  const rawPayloadRows = await all(
+    db,
+    `
+      SELECT body_json
+      FROM source_assets.raw_payloads
+      WHERE payload_type = 'augment'
+    `,
+  );
+  const metadata = collectAugmentMetadata(rawPayloadRows);
+  if (metadata.size === 0) {
+    return;
+  }
+
+  const augments = await all(db, `SELECT id, external_id, name_zh FROM augments`);
+  for (const augment of augments) {
+    const value = metadata.get(String(augment.external_id)) || metadata.get(String(augment.name_zh));
+    if (!value) {
+      continue;
+    }
+
+    await run(db, `UPDATE augments SET effect_text = ?, rules_json = ? WHERE id = ?`, [
+      value.effectText,
+      value.rulesJson,
+      augment.id,
+    ]);
+  }
+}
+
+function championMetadataKeys(champion) {
+  return [champion.chessId, champion.TFTID, champion.id, champion.displayName].map(String).filter(Boolean);
+}
+
+function parseOfficialTraitNames(value) {
+  return String(value || '')
+    .split(/[,，]/)
+    .map((trait) => trait.trim())
+    .filter(Boolean);
+}
+
+function collectChampionTraits(champion) {
+  const seen = new Set();
+  const traits = [];
+  for (const trait of [...parseOfficialTraitNames(champion.races), ...parseOfficialTraitNames(champion.jobs)]) {
+    if (seen.has(trait)) {
+      continue;
+    }
+    seen.add(trait);
+    traits.push(trait);
+  }
+  return traits;
+}
+
+function normalizeChampionStat(value) {
+  return String(value ?? '').trim();
+}
+
+function collectChampionStats(champion) {
+  const maxMana = normalizeChampionStat(champion.magic);
+  const startMana = normalizeChampionStat(champion.startMagic);
+
+  return {
+    role: normalizeChampionStat(champion.chessRole),
+    attackGrowth: normalizeChampionStat(champion.attackData || champion.attack),
+    healthGrowth: normalizeChampionStat(champion.lifeData || champion.life),
+    armor: normalizeChampionStat(champion.armor),
+    magicResist: normalizeChampionStat(champion.spellBlock),
+    attackSpeed: normalizeChampionStat(champion.attackSpeed),
+    range: normalizeChampionStat(champion.attackRange),
+    mana: startMana || maxMana ? `${startMana || '0'}/${maxMana || '0'}` : '',
+  };
+}
+
+function collectChampionMetadata(rawPayloadRows) {
+  const metadata = new Map();
+
+  for (const champion of parseOfficialPayloadRows(rawPayloadRows)) {
+    const skillDetail = normalizeSkillText(champion.skillDetail || champion.skillIntroduce);
+    const value = {
+      skillName: String(champion.skillName || '').trim(),
+      skillType: String(champion.skillType || '').trim(),
+      skillDetail,
+      skillImageUrl: String(champion.skillImage || '').trim(),
+      statsJson: JSON.stringify(collectChampionStats(champion)),
+      traitsJson: JSON.stringify(collectChampionTraits(champion)),
+    };
+    for (const key of championMetadataKeys(champion)) {
+      metadata.set(key, value);
+    }
+  }
+
+  return metadata;
+}
+
+async function applyChampionMetadata(db) {
+  if (!(await tableExists(db, 'raw_payloads', 'source_assets'))) {
+    return;
+  }
+
+  const rawPayloadRows = await all(
+    db,
+    `
+      SELECT body_json
+      FROM source_assets.raw_payloads
+      WHERE payload_type = 'champion'
+      ORDER BY source_id, id
+    `,
+  );
+  const metadata = collectChampionMetadata(rawPayloadRows);
+  if (metadata.size === 0) {
+    return;
+  }
+
+  const champions = await all(db, `SELECT id, external_id, name_zh FROM champions`);
+  for (const champion of champions) {
+    const value = metadata.get(String(champion.external_id)) || metadata.get(String(champion.name_zh));
+    if (!value) {
+      continue;
+    }
+
+    await run(db, `UPDATE champions SET skill_name = ?, skill_type = ?, skill_detail = ?, skill_image_url = ?, stats_json = ?, traits_json = ? WHERE id = ?`, [
+      value.skillName,
+      value.skillType,
+      value.skillDetail,
+      value.skillImageUrl,
+      value.statsJson,
+      value.traitsJson,
+      champion.id,
+    ]);
+  }
+}
+
 function traitMapKey(name, gameVersion, setId) {
   return `${name}\n${gameVersion}\n${setId}`;
 }
-
 async function applyTraitChampionAssociations(db) {
   const traits = await all(db, `SELECT id, name_zh, game_version, set_id FROM traits`);
   const traitsByName = new Map();
@@ -410,6 +590,11 @@ async function main() {
         name_en TEXT NOT NULL DEFAULT '',
         cost INTEGER,
         traits_json TEXT NOT NULL DEFAULT '[]',
+        skill_name TEXT NOT NULL DEFAULT '',
+        skill_type TEXT NOT NULL DEFAULT '',
+        skill_detail TEXT NOT NULL DEFAULT '',
+        skill_image_url TEXT NOT NULL DEFAULT '',
+        stats_json TEXT NOT NULL DEFAULT '{}',
         image_path TEXT NOT NULL,
         image_url TEXT NOT NULL,
         game_version TEXT NOT NULL,
@@ -452,6 +637,23 @@ async function main() {
         UNIQUE(external_id, game_version, set_id)
       );
 
+      CREATE TABLE IF NOT EXISTS augments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_id INTEGER NOT NULL REFERENCES sources(id),
+        external_id TEXT NOT NULL,
+        slug TEXT NOT NULL,
+        name_zh TEXT NOT NULL,
+        name_en TEXT NOT NULL DEFAULT '',
+        tier TEXT NOT NULL DEFAULT '',
+        effect_text TEXT NOT NULL DEFAULT '',
+        rules_json TEXT NOT NULL DEFAULT '[]',
+        image_path TEXT NOT NULL DEFAULT '',
+        image_url TEXT NOT NULL,
+        game_version TEXT NOT NULL,
+        set_id TEXT NOT NULL,
+        UNIQUE(external_id, game_version, set_id)
+      );
+
       CREATE TABLE IF NOT EXISTS trait_champions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         trait_id INTEGER NOT NULL REFERENCES traits(id) ON DELETE CASCADE,
@@ -468,6 +670,13 @@ async function main() {
     await ensureColumn(db, 'items', 'rules_json', "TEXT NOT NULL DEFAULT '[]'");
     await ensureColumn(db, 'items', 'keywords_json', "TEXT NOT NULL DEFAULT '[]'");
     await ensureColumn(db, 'items', 'formula_json', "TEXT NOT NULL DEFAULT '[]'");
+    await ensureColumn(db, 'augments', 'effect_text', "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(db, 'augments', 'rules_json', "TEXT NOT NULL DEFAULT '[]'");
+    await ensureColumn(db, 'champions', 'skill_name', "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(db, 'champions', 'skill_type', "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(db, 'champions', 'skill_detail', "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(db, 'champions', 'skill_image_url', "TEXT NOT NULL DEFAULT ''");
+    await ensureColumn(db, 'champions', 'stats_json', "TEXT NOT NULL DEFAULT '{}'");
 
     await exec(db, `
       ATTACH DATABASE ${sourceLiteral} AS source_assets;
@@ -475,6 +684,7 @@ async function main() {
       BEGIN IMMEDIATE TRANSACTION;
       DELETE FROM trait_champions;
       DELETE FROM items;
+      DELETE FROM augments;
       DELETE FROM traits;
       DELETE FROM champions;
       DELETE FROM sources;
@@ -498,10 +708,17 @@ async function main() {
         (id, source_id, external_id, slug, name_zh, name_en, category, image_path, image_url, game_version, set_id)
         SELECT id, source_id, external_id, slug, name_zh, name_en, category, image_path, image_url, game_version, set_id
         FROM source_assets.items;
+
+      INSERT INTO augments
+        (id, source_id, external_id, slug, name_zh, name_en, tier, image_path, image_url, game_version, set_id)
+        SELECT id, source_id, external_id, slug, name_zh, name_en, tier, image_path, image_url, game_version, set_id
+        FROM source_assets.augments;
     `);
 
     await applyTraitMetadata(db);
     const unresolvedFormulaMaterials = await applyItemMetadata(db);
+    await applyAugmentMetadata(db);
+    await applyChampionMetadata(db);
     await applyTraitChampionAssociations(db);
 
     await exec(db, `
@@ -509,7 +726,7 @@ async function main() {
       DETACH DATABASE source_assets;
     `);
 
-    const tables = ['sources', 'champions', 'traits', 'items'];
+    const tables = ['sources', 'champions', 'traits', 'items', 'augments'];
     for (const table of tables) {
       console.log(`${table}: ${await countRows(db, table)}`);
     }

@@ -115,6 +115,21 @@ async function seedSourceDatabase() {
       UNIQUE(external_id, game_version, set_id)
     );
 
+    CREATE TABLE augments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_id INTEGER NOT NULL REFERENCES sources(id),
+      external_id TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      name_zh TEXT NOT NULL,
+      name_en TEXT NOT NULL DEFAULT '',
+      tier TEXT NOT NULL DEFAULT '',
+      image_path TEXT NOT NULL DEFAULT '',
+      image_url TEXT NOT NULL,
+      game_version TEXT NOT NULL,
+      set_id TEXT NOT NULL,
+      UNIQUE(external_id, game_version, set_id)
+    );
+
     CREATE TABLE raw_payloads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       source_id INTEGER NOT NULL REFERENCES sources(id),
@@ -132,7 +147,7 @@ async function seedSourceDatabase() {
       image_path, image_url, game_version, set_id
     )
     VALUES
-      (1, 1, 'judge-a', 'judge-a', '裁决者A', '', 1, '["法官"]',
+      (1, 1, 'judge-a', 'judge-a', '裁决者A', '', 1, '["堡垒卫士"]',
        'assets/tft/champions/judge-a.png', 'https://cdn.example.test/judge-a.png', 'current', 'current'),
       (2, 1, 'judge-b', 'judge-b', '裁决者B', '', 3, '["法官","堡垒卫士"]',
        'assets/tft/champions/judge-b.png', 'https://cdn.example.test/judge-b.png', 'current', 'current'),
@@ -170,6 +185,17 @@ async function seedSourceDatabase() {
        'assets/tft/items/investor-blade-b.png', 'https://cdn.example.test/investor-blade-b.png', 'current', 'current'),
       (8, 1, '91920', 'gwens-shears-2', '【格温的剪子】<rules>(还可使用2次！)</rules>', '', '9',
        'assets/tft/items/gwens-shears-2.png', 'https://cdn.example.test/gwens-shears-2.png', 'current', 'current');
+
+    INSERT INTO augments (
+      id, source_id, external_id, slug, name_zh, name_en, tier, image_path, image_url, game_version, set_id
+    )
+    VALUES
+      (1, 1, '94572', '94572', '遥遥领先', '', '3', '',
+       'https://game.gtimg.cn/images/lol/act/img/tft/hex/94572.png', '16.13', '2026.S17'),
+      (2, 1, '94573', '94573', '有用之材 I', '', '1', '',
+       'https://game.gtimg.cn/images/lol/act/img/tft/hex/94573.png', '16.13', '2026.S17'),
+      (3, 1, '94574', '94574', '英勇福袋', '', '2', '',
+       'https://game.gtimg.cn/images/lol/act/img/tft/hex/94574.png', '16.13', '2026.S17');
   `);
 
   const racePayload = {
@@ -306,6 +332,102 @@ async function seedSourceDatabase() {
     );
   });
 
+  const championPayload = {
+    version: 'test',
+    season: 'current',
+    data: [
+      {
+        chessId: 'judge-a',
+        TFTID: 'judge-a',
+        displayName: '裁决者A',
+        price: '1',
+        races: '法官',
+        jobs: '堡垒卫士',
+        raceIds: '10296',
+        jobIds: '10319',
+        chessRole: '魔法坦克',
+        skillName: '神圣裁决',
+        skillType: '主动',
+        skillIntroduce:
+          '被动：每损失1%生命值，获得<TFTBonus>% (%i:scaleAP%)</TFTBonus>攻击速度。<br><br>主动：对目标造成<magicDamage> (%i:scaleAP%)</magicDamage>魔法伤害，持续@TFTUnitProperty.duration@秒。',
+        skillDetail:
+          '被动：每损失1%生命值，获得<TFTBonus>% (%i:scaleAP%)</TFTBonus>攻击速度。<br><br>主动：对目标造成<magicDamage> (%i:scaleAP%)</magicDamage>魔法伤害，持续@TFTUnitProperty.duration@秒。',
+        skillImage: 'https://cdn.example.test/judge-a-spell.png',
+        life: '650',
+        lifeData: '650/1170/2106',
+        attack: '35',
+        attackData: '35/53/79',
+        armor: '40',
+        spellBlock: '40',
+        attackSpeed: '0.6',
+        attackRange: '1',
+        magic: '100',
+        startMagic: '30',
+      },
+    ],
+  };
+
+  await new Promise((resolve, reject) => {
+    db.run(
+      `
+        INSERT INTO raw_payloads (source_id, payload_type, url, body_json, captured_at)
+        VALUES (1, 'champion', 'https://game.gtimg.cn/images/lol/act/img/tft/js/chess.js', ?, '2026-06-26T00:00:00.000Z')
+      `,
+      [JSON.stringify(championPayload)],
+      (error) => (error ? reject(error) : resolve()),
+    );
+  });
+
+  const augmentPayload = {
+    version: '16.13',
+    season: '2026.S17',
+    modeId: '1',
+    data: {
+      127152: {
+        id: '127152',
+        hexId: '94572',
+        type: '3',
+        name: '遥遥领先',
+        imgUrl: 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94572.png',
+        augments: 'TFT10_Augment_GoingLong',
+        isShow: '1',
+        description:
+          '你不再获得利息。即刻获得16金币。在你的回合开始时，获得4经验。<br><br><rules>利息是你每储存10金币时获得的额外金币。</rules>',
+      },
+      127153: {
+        id: '127153',
+        hexId: '94573',
+        type: '1',
+        name: '有用之材 I',
+        imgUrl: 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94573.png',
+        augments: 'TFT10_Augment_GoodForSomethingSilver',
+        isShow: '1',
+        description: '未携带装备的弈子们在阵亡时有40%几率掉落1金币。',
+      },
+      127154: {
+        id: '127154',
+        hexId: '94574',
+        type: '2',
+        name: '英勇福袋',
+        imgUrl: 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94574.png',
+        augments: 'TFT10_Augment_HeroicGrabBag',
+        isShow: '1',
+        description: '获得2个【次级英雄复制器】和5金币。<br><br><rules>这个物品允许你能复制一个3费或以下的弈子。</rules>',
+      },
+    },
+  };
+
+  await new Promise((resolve, reject) => {
+    db.run(
+      `
+        INSERT INTO raw_payloads (source_id, payload_type, url, body_json, captured_at)
+        VALUES (1, 'augment', 'https://game.gtimg.cn/images/lol/act/img/tft/js/hex.js', ?, '2026-06-26T00:00:00.000Z')
+      `,
+      [JSON.stringify(augmentPayload)],
+      (error) => (error ? reject(error) : resolve()),
+    );
+  });
+
   await close(db);
 }
 
@@ -402,6 +524,92 @@ async function main() {
       const investorVariants = await all(db, `SELECT external_id, name_zh FROM items WHERE name_zh = ? ORDER BY external_id`, ['投机者之刃']);
       if (investorVariants.length !== 2 || investorVariants[0].external_id !== '92350' || investorVariants[1].external_id !== '92351') {
         throw new Error(`Imported same-name official variants should remain separate: ${JSON.stringify(investorVariants)}`);
+      }
+
+      const augmentColumns = await all(db, `PRAGMA table_info(augments)`);
+      const augmentColumnNames = new Set(augmentColumns.map((column) => column.name));
+      for (const columnName of ['tier', 'effect_text', 'rules_json', 'image_url', 'game_version', 'set_id']) {
+        if (!augmentColumnNames.has(columnName)) {
+          throw new Error(`augments table should persist ${columnName}: ${[...augmentColumnNames].join(',')}`);
+        }
+      }
+
+      const augmentCounts = await all(db, `SELECT tier, COUNT(*) AS count FROM augments GROUP BY tier ORDER BY tier`);
+      const tierCounts = Object.fromEntries(augmentCounts.map((row) => [row.tier, row.count]));
+      if (tierCounts['1'] !== 1 || tierCounts['2'] !== 1 || tierCounts['3'] !== 1) {
+        throw new Error(`Expected imported augment tier distribution, got: ${JSON.stringify(augmentCounts)}`);
+      }
+
+      const goingLong = await get(db, `SELECT effect_text, rules_json, image_url, game_version, set_id FROM augments WHERE name_zh = ?`, [
+        '遥遥领先',
+      ]);
+      if (
+        !goingLong?.effect_text?.includes('即刻获得16金币') ||
+        goingLong.effect_text.includes('<rules>') ||
+        goingLong.effect_text.includes('利息是你每储存10金币')
+      ) {
+        throw new Error(`Expected cleaned augment effect without rule text, got: ${JSON.stringify(goingLong)}`);
+      }
+      const augmentRules = JSON.parse(goingLong.rules_json);
+      if (!Array.isArray(augmentRules) || augmentRules[0] !== '利息是你每储存10金币时获得的额外金币。') {
+        throw new Error(`Expected split augment rule text, got: ${goingLong.rules_json}`);
+      }
+      if (
+        goingLong.image_url !== 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94572.png' ||
+        goingLong.game_version !== '16.13' ||
+        goingLong.set_id !== '2026.S17'
+      ) {
+        throw new Error(`Expected augment display metadata, got: ${JSON.stringify(goingLong)}`);
+      }
+
+      const championColumns = await all(db, `PRAGMA table_info(champions)`);
+      const championColumnNames = new Set(championColumns.map((column) => column.name));
+      for (const columnName of ['skill_name', 'skill_type', 'skill_detail', 'skill_image_url', 'stats_json']) {
+        if (!championColumnNames.has(columnName)) {
+          throw new Error(`champions table should persist ${columnName}: ${[...championColumnNames].join(',')}`);
+        }
+      }
+
+      const judgeChampion = await get(
+        db,
+        `SELECT skill_name, skill_type, skill_detail, skill_image_url, stats_json, traits_json FROM champions WHERE name_zh = ?`,
+        ['裁决者A'],
+      );
+      if (judgeChampion?.skill_name !== '神圣裁决' || judgeChampion?.skill_type !== '主动') {
+        throw new Error(`Expected imported champion skill name/type, got: ${JSON.stringify(judgeChampion)}`);
+      }
+      if (judgeChampion?.skill_image_url !== 'https://cdn.example.test/judge-a-spell.png') {
+        throw new Error(`Expected imported champion skill image url, got: ${JSON.stringify(judgeChampion)}`);
+      }
+      if (
+        judgeChampion.skill_detail.includes('<') ||
+        judgeChampion.skill_detail.includes('%i:') ||
+        judgeChampion.skill_detail.includes('@TFTUnitProperty')
+      ) {
+        throw new Error(`Imported champion skill should not expose official markup/placeholders: ${JSON.stringify(judgeChampion)}`);
+      }
+      if (!judgeChampion.skill_detail.includes('\n')) {
+        throw new Error(`Imported champion skill should preserve passive/active line break: ${JSON.stringify(judgeChampion)}`);
+      }
+      if (!judgeChampion.skill_detail.includes('法术强度')) {
+        throw new Error(`Imported champion skill should render stat icon placeholders as readable labels: ${JSON.stringify(judgeChampion)}`);
+      }
+      const championTraits = JSON.parse(judgeChampion.traits_json);
+      if (championTraits.join(',') !== '法官,堡垒卫士') {
+        throw new Error(`Imported champion traits should use full raw payload races/jobs, got: ${JSON.stringify(championTraits)}`);
+      }
+      const championStats = JSON.parse(judgeChampion.stats_json);
+      if (
+        championStats.role !== '魔法坦克' ||
+        championStats.attackGrowth !== '35/53/79' ||
+        championStats.healthGrowth !== '650/1170/2106' ||
+        championStats.armor !== '40' ||
+        championStats.magicResist !== '40' ||
+        championStats.attackSpeed !== '0.6' ||
+        championStats.range !== '1' ||
+        championStats.mana !== '30/100'
+      ) {
+        throw new Error(`Expected imported champion stats, got: ${JSON.stringify(championStats)}`);
       }
 
       const relationColumns = await all(db, `PRAGMA table_info(trait_champions)`);

@@ -43,6 +43,7 @@ async function seedDatabase() {
       name_en TEXT NOT NULL DEFAULT '',
       cost INTEGER,
       traits_json TEXT NOT NULL DEFAULT '[]',
+      stats_json TEXT NOT NULL DEFAULT '{}',
       image_path TEXT NOT NULL,
       image_url TEXT NOT NULL,
       game_version TEXT NOT NULL,
@@ -85,6 +86,23 @@ async function seedDatabase() {
       UNIQUE(external_id, game_version, set_id)
     );
 
+    CREATE TABLE augments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_id INTEGER NOT NULL REFERENCES sources(id),
+      external_id TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      name_zh TEXT NOT NULL,
+      name_en TEXT NOT NULL DEFAULT '',
+      tier TEXT NOT NULL DEFAULT '',
+      effect_text TEXT NOT NULL DEFAULT '',
+      rules_json TEXT NOT NULL DEFAULT '[]',
+      image_path TEXT NOT NULL DEFAULT '',
+      image_url TEXT NOT NULL,
+      game_version TEXT NOT NULL,
+      set_id TEXT NOT NULL,
+      UNIQUE(external_id, game_version, set_id)
+    );
+
     CREATE TABLE trait_champions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       trait_id INTEGER NOT NULL REFERENCES traits(id),
@@ -98,15 +116,16 @@ async function seedDatabase() {
     VALUES (1, 'https://example.test/tft', 'current', 'current', '2026-06-25T00:00:00.000Z', 'partial');
 
     INSERT INTO champions (
-      source_id, external_id, slug, name_zh, cost, traits_json,
+      source_id, external_id, slug, name_zh, cost, traits_json, stats_json,
       image_path, image_url, game_version, set_id
     )
     VALUES
-      (1, 'aatrox', 'aatrox', '亚托克斯', 1, '["堡垒卫士"]',
+      (1, 'aatrox', 'aatrox', '亚托克斯', 1, '["幻灵战队","法官"]',
+       '{"role":"物理战士","attackGrowth":"35/53/79","healthGrowth":"650/1170/2106","armor":"40","magicResist":"40","attackSpeed":"0.6","range":"1","mana":"30/100"}',
        'assets/tft/champions/aatrox.png', 'https://cdn.example.test/aatrox.png', 'current', 'current'),
-      (1, 'jinx', 'jinx', '金克丝', 2, '["幻灵战队"]',
+      (1, 'jinx', 'jinx', '金克丝', 2, '["幻灵战队"]', '{}',
        'assets/tft/champions/jinx.png', 'https://cdn.example.test/jinx.png', 'current', 'current'),
-      (1, 'forge', 'forge', '成装锻造器', 8, '[]',
+      (1, 'forge', 'forge', '成装锻造器', 8, '[]', '{}',
        'assets/tft/champions/forge.png', 'https://cdn.example.test/forge.png', 'current', 'current');
 
     INSERT INTO traits (
@@ -158,6 +177,23 @@ async function seedDatabase() {
        '["格温的剪子"]',
        '[]',
        'assets/tft/items/gwens-shears-2.png', 'https://cdn.example.test/gwens-shears-2.png', 'current', 'current');
+
+    INSERT INTO augments (
+      source_id, external_id, slug, name_zh, tier, effect_text, rules_json, image_path, image_url, game_version, set_id
+    )
+    VALUES
+      (1, '94573', '94573', '有用之材 I', '1',
+       '未携带装备的弈子们在阵亡时有40%几率掉落1金币。',
+       '[]',
+       '', 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94573.png', '16.13', '2026.S17'),
+      (1, '94574', '94574', '英勇福袋', '2',
+       '获得2个【次级英雄复制器】和5金币。',
+       '["这个物品允许你能复制一个3费或以下的弈子。"]',
+       '', 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94574.png', '16.13', '2026.S17'),
+      (1, '94572', '94572', '遥遥领先', '3',
+       '你不再获得利息。即刻获得16金币。在你的回合开始时，获得4经验。',
+       '["利息是你每储存10金币时获得的额外金币。"]',
+       '', 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94572.png', '16.13', '2026.S17');
 
     INSERT INTO trait_champions (trait_id, champion_id, game_version, set_id)
     VALUES
@@ -256,6 +292,28 @@ async function main() {
       throw new Error(`Special object should be labeled 特殊对象: ${JSON.stringify(special)}`);
     }
 
+    const aatrox = body.items.find((item) => item.name === '亚托克斯');
+    if (
+      aatrox?.stats?.role !== '物理战士' ||
+      aatrox.stats.attackGrowth !== '35/53/79' ||
+      aatrox.stats.healthGrowth !== '650/1170/2106' ||
+      aatrox.stats.armor !== '40' ||
+      aatrox.stats.magicResist !== '40' ||
+      aatrox.stats.attackSpeed !== '0.6' ||
+      aatrox.stats.range !== '1' ||
+      aatrox.stats.mana !== '30/100'
+    ) {
+      throw new Error(`Champion response should include curated stats: ${JSON.stringify(aatrox)}`);
+    }
+    const aatroxTraitNames = (aatrox?.traitDetails || []).map((trait) => trait.name).join(',');
+    if (
+      aatroxTraitNames !== '幻灵战队,法官' ||
+      aatrox.traitDetails[0]?.imageUrl !== 'https://cdn.example.test/anima.png' ||
+      aatrox.traitDetails[1]?.imageUrl !== 'https://cdn.example.test/judge.png'
+    ) {
+      throw new Error(`Champion response should include full trait details with icons: ${JSON.stringify(aatrox)}`);
+    }
+
     const traitResponse = await request('/api/data?type=traits&q=幻灵');
     const traitBody = parseJson(traitResponse);
     if (traitResponse.statusCode !== 200 || traitBody.type !== 'traits' || traitBody.total !== 1 || traitBody.items[0]?.name !== '幻灵战队') {
@@ -345,11 +403,67 @@ async function main() {
     if (
       augmentResponse.statusCode !== 200 ||
       augmentBody.type !== 'augments' ||
-      augmentBody.available !== false ||
-      augmentBody.total !== 0 ||
-      augmentBody.items.length !== 0
+      augmentBody.available !== true ||
+      augmentBody.total !== 3 ||
+      augmentBody.items[0]?.name !== '有用之材 I' ||
+      augmentBody.items[2]?.tierLabel !== '彩'
     ) {
-      throw new Error(`Invalid unavailable augment response: ${JSON.stringify({ statusCode: augmentResponse.statusCode, body: augmentBody })}`);
+      throw new Error(`Invalid augment response: ${JSON.stringify({ statusCode: augmentResponse.statusCode, body: augmentBody })}`);
+    }
+    const goingLong = augmentBody.items.find((item) => item.name === '遥遥领先');
+    if (
+      goingLong?.tier !== '3' ||
+      goingLong?.effectText?.includes('利息是你每储存10金币') ||
+      goingLong?.rules?.[0] !== '利息是你每储存10金币时获得的额外金币。' ||
+      goingLong?.gameVersion !== '16.13' ||
+      goingLong?.setId !== '2026.S17'
+    ) {
+      throw new Error(`Augment response should expose display fields and split rules: ${JSON.stringify(goingLong)}`);
+    }
+
+    const augmentSearchResponse = await request('/api/data?type=augments&q=利息');
+    const augmentSearchBody = parseJson(augmentSearchResponse);
+    if (
+      augmentSearchResponse.statusCode !== 200 ||
+      augmentSearchBody.type !== 'augments' ||
+      augmentSearchBody.total !== 1 ||
+      augmentSearchBody.items[0]?.name !== '遥遥领先'
+    ) {
+      throw new Error(`Augment search should match effect/rule text: ${JSON.stringify(augmentSearchBody)}`);
+    }
+
+    const augmentInternalKeyResponse = await request('/api/data?type=augments&q=TFT10_Augment_GoingLong');
+    const augmentInternalKeyBody = parseJson(augmentInternalKeyResponse);
+    if (augmentInternalKeyResponse.statusCode !== 200 || augmentInternalKeyBody.total !== 0) {
+      throw new Error(`Augment search should not match internal English keys: ${JSON.stringify(augmentInternalKeyBody)}`);
+    }
+
+    const augmentTierResponse = await request('/api/data?type=augments&tier=3');
+    const augmentTierBody = parseJson(augmentTierResponse);
+    if (
+      augmentTierResponse.statusCode !== 200 ||
+      augmentTierBody.total !== 1 ||
+      augmentTierBody.items[0]?.name !== '遥遥领先'
+    ) {
+      throw new Error(`Augment tier filter should return matching tier only: ${JSON.stringify(augmentTierBody)}`);
+    }
+
+    const writableDb = new sqlite3.Database(databasePath);
+    try {
+      await exec(writableDb, `DROP TABLE augments`);
+    } finally {
+      await close(writableDb);
+    }
+    const missingAugmentResponse = await request('/api/data?type=augments');
+    const missingAugmentBody = parseJson(missingAugmentResponse);
+    if (
+      missingAugmentResponse.statusCode !== 200 ||
+      missingAugmentBody.type !== 'augments' ||
+      missingAugmentBody.available !== false ||
+      missingAugmentBody.total !== 0 ||
+      missingAugmentBody.items.length !== 0
+    ) {
+      throw new Error(`Missing augment table should degrade to unavailable response: ${JSON.stringify(missingAugmentBody)}`);
     }
 
     console.log('Data API contract check passed.');

@@ -12,8 +12,13 @@ type DataItem = {
   slug: string;
   name: string;
   imageUrl: string;
+  tier?: string;
+  tierLabel?: string;
+  gameVersion?: string;
+  setId?: string;
   cost?: number | null;
   traits?: string[];
+  traitDetails?: Array<{ id: string; slug: string; name: string; imageUrl: string }>;
   description?: string;
   levels?: Array<{ threshold: number; effect: string }>;
   champions?: Array<{ id: string; slug: string; name: string; cost: number | null; imageUrl: string }>;
@@ -21,6 +26,17 @@ type DataItem = {
   effectText?: string;
   rules?: string[];
   formula?: Array<{ id: string; name: string; imageUrl: string; unresolved?: boolean }>;
+  skill?: { name: string; type: string; detail: string; imageUrl: string };
+  stats?: {
+    role?: string;
+    attackGrowth?: string;
+    healthGrowth?: string;
+    armor?: string;
+    magicResist?: string;
+    attackSpeed?: string;
+    range?: string;
+    mana?: string;
+  };
 };
 
 type DataResponse = {
@@ -30,18 +46,25 @@ type DataResponse = {
   items: DataItem[];
 };
 
-const tabs: Array<{ type: DataType; label: string; disabled?: boolean }> = [
+const tabs: Array<{ type: DataType; label: string }> = [
   { type: 'champions', label: '英雄' },
   { type: 'traits', label: '羁绊' },
   { type: 'items', label: '装备' },
-  { type: 'augments', label: '强化符文', disabled: true },
+  { type: 'augments', label: '强化符文' },
+];
+
+const augmentTiers = [
+  { value: '', label: '全部' },
+  { value: '1', label: '银' },
+  { value: '2', label: '金' },
+  { value: '3', label: '彩' },
 ];
 
 const placeholders: Record<DataType, string> = {
   champions: '搜索英雄或羁绊',
   traits: '搜索羁绊',
   items: '搜索装备',
-  augments: '强化符文待补充',
+  augments: '搜索强化符文',
 };
 
 function normalizeType(value: string | null): DataType {
@@ -52,44 +75,131 @@ function resultLabel(type: DataType) {
   return tabs.find((tab) => tab.type === type)?.label || '英雄';
 }
 
-function buildDataUrl(type: DataType, query: string) {
+function buildDataUrl(type: DataType, query: string, tier: string) {
   const params = new URLSearchParams();
   params.set('type', type);
   if (query.trim()) {
     params.set('q', query.trim());
   }
+  if (type === 'augments' && ['1', '2', '3'].includes(tier)) {
+    params.set('tier', tier);
+  }
   return `/api/data?${params.toString()}`;
 }
 
 function ChampionRow({ item }: { item: DataItem }) {
+  const [expanded, setExpanded] = useState(false);
+  const skill = item.skill;
+  const stats = item.stats;
+  const traitDetails = item.traitDetails || [];
+  const statItems = [
+    { label: '定位', value: stats?.role },
+    { label: '攻击成长', value: stats?.attackGrowth },
+    { label: '生命成长', value: stats?.healthGrowth },
+    { label: '护甲', value: stats?.armor },
+    { label: '魔抗', value: stats?.magicResist },
+    { label: '攻速', value: stats?.attackSpeed },
+    { label: '射程', value: stats?.range },
+    { label: '法力', value: stats?.mana },
+  ].filter((stat) => stat.value);
+  const canExpand = Boolean((skill && (skill.name || skill.detail)) || statItems.length > 0 || traitDetails.length > 0);
+
   return (
-    <div className="flex min-h-[60px] items-center gap-3 border-b border-border/70 bg-white px-3 py-2 last:border-b-0">
-      <img
-        src={item.imageUrl}
-        alt={item.name}
-        className="h-11 w-11 flex-none rounded-md border border-border bg-gray-100 object-cover"
-        loading="lazy"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold text-text-primary">{item.name}</p>
-          <span className="flex-none rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700">
-            {item.cost || '-'}费
-          </span>
-        </div>
-        <div className="mt-1 flex gap-1 overflow-hidden">
-          {(item.traits || []).slice(0, 3).map((trait) => (
-            <span
-              key={trait}
-              className={`truncate rounded px-1.5 py-0.5 text-xs ${
-                trait === '特殊对象' ? 'bg-gray-100 text-text-secondary' : 'bg-accent-light text-accent'
-              }`}
-            >
-              {trait}
+    <div className="border-b border-border/70 bg-white last:border-b-0">
+      <button
+        type="button"
+        onClick={() => canExpand && setExpanded((value) => !value)}
+        aria-expanded={canExpand ? expanded : undefined}
+        disabled={!canExpand}
+        className="flex min-h-[60px] w-full items-center gap-3 px-3 py-2 text-left disabled:cursor-default"
+      >
+        <img
+          src={item.imageUrl}
+          alt={item.name}
+          className="h-11 w-11 flex-none rounded-md border border-border bg-gray-100 object-cover"
+          loading="lazy"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <p className="truncate text-sm font-semibold text-text-primary">{item.name}</p>
+            <span className="flex-none rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-xs text-amber-700">
+              {item.cost || '-'}费
             </span>
-          ))}
+          </div>
+          <div className="mt-1 flex gap-1 overflow-hidden">
+            {(item.traits || []).slice(0, 3).map((trait) => (
+              <span
+                key={trait}
+                className={`truncate rounded px-1.5 py-0.5 text-xs ${
+                  trait === '特殊对象' ? 'bg-gray-100 text-text-secondary' : 'bg-accent-light text-accent'
+                }`}
+              >
+                {trait}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+        {canExpand ? (
+          <span className={`flex-none text-xs text-text-secondary transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden>
+            ▾
+          </span>
+        ) : null}
+      </button>
+      {canExpand && expanded ? (
+        <div className="border-t border-border/60 bg-surface px-3 py-3">
+          <div className="flex gap-3">
+            {skill?.imageUrl ? (
+              <img
+                src={skill.imageUrl}
+                alt={skill.name}
+                className="h-10 w-10 flex-none rounded-md border border-border bg-gray-100 object-cover"
+                loading="lazy"
+              />
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="truncate text-sm font-semibold text-text-primary">{skill?.name}</p>
+                {skill?.type ? (
+                  <span className="flex-none rounded border border-border bg-white px-1.5 py-0.5 text-xs text-text-secondary">
+                    {skill.type}
+                  </span>
+                ) : null}
+              </div>
+              {skill?.detail ? (
+                <p className="mt-1 whitespace-pre-line text-xs leading-5 text-text-secondary">{skill.detail}</p>
+              ) : null}
+            </div>
+          </div>
+          {statItems.length ? (
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {statItems.map((stat) => (
+                <div key={stat.label} className="min-w-0 rounded border border-border bg-white px-2 py-1.5">
+                  <p className="text-[11px] leading-4 text-text-secondary">{stat.label}</p>
+                  <p className="truncate text-xs font-semibold text-text-primary">{stat.value}</p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {traitDetails.length ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {traitDetails.map((trait) => (
+                <span
+                  key={`${item.id}-${trait.id}`}
+                  className="inline-flex max-w-full items-center gap-1.5 rounded border border-border bg-white px-1.5 py-1 text-xs text-text-secondary"
+                >
+                  <img
+                    src={trait.imageUrl}
+                    alt={trait.name}
+                    className="h-5 w-5 flex-none rounded border border-slate-600 bg-slate-700 p-0.5 object-contain"
+                    loading="lazy"
+                  />
+                  <span className="truncate">{trait.name}</span>
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -167,6 +277,39 @@ function ItemRow({ item }: { item: DataItem }) {
   );
 }
 
+function AugmentRow({ item }: { item: DataItem }) {
+  return (
+    <div className="flex gap-3 border-b border-border/70 bg-white px-3 py-3 last:border-b-0">
+      <img
+        src={item.imageUrl}
+        alt={item.name}
+        className="h-10 w-10 flex-none rounded-md border border-border bg-gray-100 object-cover"
+        loading="lazy"
+      />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm font-semibold text-text-primary">{item.name}</p>
+          {item.tierLabel ? (
+            <span className="flex-none rounded border border-border bg-surface px-1.5 py-0.5 text-xs text-text-secondary">
+              {item.tierLabel}
+            </span>
+          ) : null}
+        </div>
+        {item.effectText ? <p className="mt-1 text-xs leading-5 text-text-secondary">{item.effectText}</p> : null}
+        {item.rules?.length ? (
+          <div className="mt-2 space-y-1">
+            {item.rules.map((rule) => (
+              <p key={`${item.id}-${rule}`} className="rounded border border-border bg-surface px-2 py-1 text-xs leading-5 text-text-secondary">
+                {rule}
+              </p>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function TraitRow({ item }: { item: DataItem }) {
   return (
     <div className="flex gap-3 border-b border-border/70 bg-white px-3 py-3 last:border-b-0">
@@ -232,6 +375,7 @@ export default function DataPageClient() {
   const searchParams = useSearchParams();
   const activeType = normalizeType(searchParams.get('type'));
   const query = searchParams.get('q') || '';
+  const activeTier = ['1', '2', '3'].includes(searchParams.get('tier') || '') ? searchParams.get('tier') || '' : '';
   const [inputValue, setInputValue] = useState(query);
   const [data, setData] = useState<DataResponse | null>(null);
   const [error, setError] = useState(false);
@@ -246,7 +390,7 @@ export default function DataPageClient() {
     setLoading(true);
     setError(false);
 
-    fetch(buildDataUrl(activeType, query), { cache: 'no-store' })
+    fetch(buildDataUrl(activeType, query, activeTier), { cache: 'no-store' })
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Data request failed: ${response.status}`);
@@ -274,7 +418,7 @@ export default function DataPageClient() {
     return () => {
       cancelled = true;
     };
-  }, [activeType, query]);
+  }, [activeTier, activeType, query]);
 
   useEffect(() => {
     if (inputValue === query) return;
@@ -282,6 +426,9 @@ export default function DataPageClient() {
     const timer = window.setTimeout(() => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('type', activeType);
+      if (activeType !== 'augments') {
+        params.delete('tier');
+      }
       if (inputValue.trim()) {
         params.set('q', inputValue.trim());
       } else {
@@ -295,16 +442,33 @@ export default function DataPageClient() {
 
   const summary = useMemo(() => {
     const label = resultLabel(activeType);
+    if (activeType === 'augments') {
+      const version = data?.items?.[0]?.gameVersion || '';
+      const prefix = query ? `${label} · “${query}” · 常规模式` : `${label} · 常规模式`;
+      return `${prefix}${version ? ` · ${version}` : ''} · ${data?.total ?? 0} 条结果`;
+    }
     if (query) {
       return `${label} · “${query}” · ${data?.total ?? 0} 条结果`;
     }
     return `${label} · ${data?.total ?? 0} 条结果`;
-  }, [activeType, data?.total, query]);
+  }, [activeType, data?.items, data?.total, query]);
 
   function selectType(nextType: DataType) {
     const params = new URLSearchParams(searchParams.toString());
     params.set('type', nextType);
     params.delete('q');
+    params.delete('tier');
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }
+
+  function selectAugmentTier(nextTier: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('type', 'augments');
+    if (nextTier) {
+      params.set('tier', nextTier);
+    } else {
+      params.delete('tier');
+    }
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }
 
@@ -327,14 +491,11 @@ export default function DataPageClient() {
             <button
               key={tab.type}
               type="button"
-              disabled={tab.disabled}
               onClick={() => selectType(tab.type)}
               className={`h-10 flex-none rounded-lg border px-3 text-sm font-medium transition ${
                 activeType === tab.type
                   ? 'border-accent bg-accent text-white'
-                  : tab.disabled
-                    ? 'border-border bg-gray-100 text-gray-400'
-                    : 'border-border bg-white text-text-secondary'
+                  : 'border-border bg-white text-text-secondary'
               }`}
             >
               {tab.label}
@@ -347,12 +508,28 @@ export default function DataPageClient() {
           <input
             aria-label="搜索资料"
             value={inputValue}
-            disabled={activeType === 'augments'}
             onChange={(event) => setInputValue(event.target.value)}
-            className="h-11 w-full rounded-lg border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:bg-gray-100"
+            className="h-11 w-full rounded-lg border border-border bg-white px-3 text-sm text-text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/15"
             placeholder={placeholders[activeType]}
           />
         </label>
+
+        {activeType === 'augments' ? (
+          <div className="flex gap-2 overflow-x-auto pb-1" aria-label="强化符文品质">
+            {augmentTiers.map((tier) => (
+              <button
+                key={tier.value || 'all'}
+                type="button"
+                onClick={() => selectAugmentTier(tier.value)}
+                className={`h-9 flex-none rounded-lg border px-3 text-sm font-medium transition ${
+                  activeTier === tier.value ? 'border-accent bg-accent text-white' : 'border-border bg-white text-text-secondary'
+                }`}
+              >
+                {tier.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <p className="px-1 text-sm text-text-secondary">{summary}</p>
 
@@ -360,6 +537,10 @@ export default function DataPageClient() {
           <ErrorState />
         ) : loading ? (
           <div className="rounded-lg border border-border bg-white px-4 py-8 text-center text-sm text-text-secondary">加载中</div>
+        ) : data?.available === false ? (
+          <div className="rounded-lg border border-dashed border-border bg-white px-4 py-8 text-center">
+            <h2 className="text-base font-bold text-text-primary">资料待补充</h2>
+          </div>
         ) : items.length === 0 ? (
           <EmptyState />
         ) : (
@@ -371,6 +552,8 @@ export default function DataPageClient() {
                 <TraitRow key={item.id} item={item} />
               ) : activeType === 'items' ? (
                 <ItemRow key={item.id} item={item} />
+              ) : activeType === 'augments' ? (
+                <AugmentRow key={item.id} item={item} />
               ) : (
                 <SimpleRow key={item.id} item={item} type={activeType} />
               ),

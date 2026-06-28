@@ -85,6 +85,23 @@ async function seedDatabase() {
       UNIQUE(external_id, game_version, set_id)
     );
 
+    CREATE TABLE augments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_id INTEGER NOT NULL REFERENCES sources(id),
+      external_id TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      name_zh TEXT NOT NULL,
+      name_en TEXT NOT NULL DEFAULT '',
+      tier TEXT NOT NULL DEFAULT '',
+      effect_text TEXT NOT NULL DEFAULT '',
+      rules_json TEXT NOT NULL DEFAULT '[]',
+      image_path TEXT NOT NULL DEFAULT '',
+      image_url TEXT NOT NULL,
+      game_version TEXT NOT NULL,
+      set_id TEXT NOT NULL,
+      UNIQUE(external_id, game_version, set_id)
+    );
+
     CREATE TABLE trait_champions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       trait_id INTEGER NOT NULL REFERENCES traits(id),
@@ -155,6 +172,23 @@ async function seedDatabase() {
        '[]',
        'assets/tft/items/gwens-shears-2.png', 'https://cdn.example.test/gwens-shears-2.png', 'current', 'current');
 
+    INSERT INTO augments (
+      source_id, external_id, slug, name_zh, tier, effect_text, rules_json, image_path, image_url, game_version, set_id
+    )
+    VALUES
+      (1, '94573', '94573', '有用之材 I', '1',
+       '未携带装备的弈子们在阵亡时有40%几率掉落1金币。',
+       '[]',
+       '', 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94573.png', '16.13', '2026.S17'),
+      (1, '94574', '94574', '英勇福袋', '2',
+       '获得2个【次级英雄复制器】和5金币。',
+       '["这个物品允许你能复制一个3费或以下的弈子。"]',
+       '', 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94574.png', '16.13', '2026.S17'),
+      (1, '94572', '94572', '遥遥领先', '3',
+       '你不再获得利息。即刻获得16金币。在你的回合开始时，获得4经验。',
+       '["利息是你每储存10金币时获得的额外金币。"]',
+       '', 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94572.png', '16.13', '2026.S17');
+
     INSERT INTO trait_champions (trait_id, champion_id, game_version, set_id)
     VALUES
       (1, 1, 'current', 'current'),
@@ -178,6 +212,9 @@ function requestJson(pathname) {
           reject(new Error(`Expected JSON response, got ${res.statusCode}: ${body}`));
         }
       });
+    });
+    req.setTimeout(5000, () => {
+      req.destroy(new Error(`Request timed out: ${pathname}`));
     });
     req.on('error', reject);
   });
@@ -225,7 +262,11 @@ async function main() {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 
+  let stdout = '';
   let stderr = '';
+  child.stdout.on('data', (chunk) => {
+    stdout += chunk.toString();
+  });
   child.stderr.on('data', (chunk) => {
     stderr += chunk.toString();
   });
@@ -333,17 +374,50 @@ async function main() {
     if (
       augmentResponse.statusCode !== 200 ||
       augmentResponse.body.type !== 'augments' ||
-      augmentResponse.body.available !== false ||
-      augmentResponse.body.total !== 0 ||
-      augmentResponse.body.items.length !== 0
+      augmentResponse.body.available !== true ||
+      augmentResponse.body.total !== 3 ||
+      augmentResponse.body.items[0]?.name !== '有用之材 I' ||
+      augmentResponse.body.items[2]?.tierLabel !== '彩'
     ) {
       throw new Error(`Invalid Next augment API response: ${JSON.stringify(augmentResponse)}`);
+    }
+    const goingLong = augmentResponse.body.items.find((item) => item.name === '遥遥领先');
+    if (
+      goingLong?.tier !== '3' ||
+      goingLong?.effectText?.includes('利息是你每储存10金币') ||
+      goingLong?.rules?.[0] !== '利息是你每储存10金币时获得的额外金币。' ||
+      goingLong?.gameVersion !== '16.13' ||
+      goingLong?.setId !== '2026.S17'
+    ) {
+      throw new Error(`Next augment API should expose display fields and split rules: ${JSON.stringify(goingLong)}`);
+    }
+
+    const augmentSearchResponse = await requestJson('/api/data?type=augments&q=利息');
+    if (
+      augmentSearchResponse.statusCode !== 200 ||
+      augmentSearchResponse.body.type !== 'augments' ||
+      augmentSearchResponse.body.total !== 1 ||
+      augmentSearchResponse.body.items[0]?.name !== '遥遥领先'
+    ) {
+      throw new Error(`Next augment search should match effect/rule text: ${JSON.stringify(augmentSearchResponse.body)}`);
+    }
+
+    const augmentTierResponse = await requestJson('/api/data?type=augments&tier=3');
+    if (
+      augmentTierResponse.statusCode !== 200 ||
+      augmentTierResponse.body.total !== 1 ||
+      augmentTierResponse.body.items[0]?.name !== '遥遥领先'
+    ) {
+      throw new Error(`Next augment tier filter should return matching tier only: ${JSON.stringify(augmentTierResponse.body)}`);
     }
 
     console.log('Next data API contract check passed.');
   } finally {
     await stopChild(child);
     fs.rmSync(tempRoot, { recursive: true, force: true });
+    if (stdout.trim()) {
+      console.error(stdout.trim());
+    }
     if (stderr.trim()) {
       console.error(stderr.trim());
     }

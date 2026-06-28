@@ -6,6 +6,7 @@ export async function GET(request: Request) {
     const body = await listDataReferences({
       type: searchParams.get('type'),
       q: searchParams.get('q'),
+      tier: searchParams.get('tier'),
     });
 
     return Response.json(body);

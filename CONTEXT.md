@@ -63,12 +63,22 @@ _Avoid_: Deduplicated item, canonical item
 A champion-table reference entry shown in the data index even when it represents a special unit, dummy, orb, tome, or other non-standard game object. The data page should not silently filter these entries out of the hero tab.
 _Avoid_: Playable champion only, normal unit only
 
+**Champion Detail (英雄详细数据)**
+Official factual fields attached to a champion reference and revealed on demand in the hero tab, covering its ability (name, type, description) and combat stats (cost-tier growth for attack and health, plus base defensive stats and role). Synergies reuse the champion's existing trait data. It is scannable factual lookup, not strategy guidance, strength scoring, or recommended item builds.
+_Avoid_: 英雄攻略, 推荐出装, 强度评级, 阵容推荐
+_Note_: Recommended equipment (recEquip) is intentionally excluded — the official source provides no data for it.
+
+**Augment Reference (强化符文资料)**
+An augment-table reference entry shown in the data index, sourced from the official simulator's buff/hex data and treated as factual lookup. It includes the augment's name, tier, icon, cleaned effect text, and rule notes when present. It is not augment recommendation, composition guidance, or win-rate analysis.
+_Avoid_: 强化推荐, 海克斯攻略, 阵容适配, 胜率排行
+_Note_: Rule notes are explanatory `<rules>` text split from the official description, not part of the main effect text.
+
 **Special Object (特殊对象)**
 A champion reference with no trait data or an unusual cost that still belongs in the hero tab. It should be labeled as 特殊对象 and sorted after regular 1-5 cost champions.
 _Avoid_: Missing trait data, invalid champion
 
 **Unavailable Data Type (未接入资料类型)**
-A planned reference category shown as unavailable when the site does not yet have enough source data to make it useful. 强化符文 is unavailable in the first data page release.
+A planned reference category shown as unavailable when the site does not yet have enough source data to make it useful.
 _Avoid_: Empty section, broken feature
 
 **Data Index Page (资料索引页)**

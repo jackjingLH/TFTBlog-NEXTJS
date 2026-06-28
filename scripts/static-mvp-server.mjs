@@ -219,6 +219,7 @@ async function handleDataApi(url, res) {
     const body = await listDataReferences({
       type: url.searchParams.get('type'),
       q: url.searchParams.get('q'),
+      tier: url.searchParams.get('tier'),
     });
     sendJson(res, 200, body);
     return true;

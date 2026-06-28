@@ -9,6 +9,11 @@ import sqlite3 from 'sqlite3';
 const port = 43400 + Math.floor(Math.random() * 1000);
 const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tftblog-data-page-contract-'));
 const databasePath = path.join(tempRoot, 'content.sqlite');
+const chromiumExecutable = [
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+].find((filePath) => filePath && fs.existsSync(filePath));
 
 function exec(db, sql) {
   return new Promise((resolve, reject) => {
@@ -77,6 +82,22 @@ async function seedDatabase() {
       keywords_json TEXT NOT NULL DEFAULT '[]',
       formula_json TEXT NOT NULL DEFAULT '[]',
       image_path TEXT NOT NULL,
+      image_url TEXT NOT NULL,
+      game_version TEXT NOT NULL,
+      set_id TEXT NOT NULL
+    );
+
+    CREATE TABLE augments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_id INTEGER NOT NULL REFERENCES sources(id),
+      external_id TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      name_zh TEXT NOT NULL,
+      name_en TEXT NOT NULL DEFAULT '',
+      tier TEXT NOT NULL DEFAULT '',
+      effect_text TEXT NOT NULL DEFAULT '',
+      rules_json TEXT NOT NULL DEFAULT '[]',
+      image_path TEXT NOT NULL DEFAULT '',
       image_url TEXT NOT NULL,
       game_version TEXT NOT NULL,
       set_id TEXT NOT NULL
@@ -151,6 +172,23 @@ async function seedDatabase() {
        '[]',
        'assets/tft/items/gwens-shears-2.png', 'https://cdn.example.test/gwens-shears-2.png', 'current', 'current');
 
+    INSERT INTO augments (
+      source_id, external_id, slug, name_zh, tier, effect_text, rules_json, image_path, image_url, game_version, set_id
+    )
+    VALUES
+      (1, '94573', '94573', '有用之材 I', '1',
+       '未携带装备的弈子们在阵亡时有40%几率掉落1金币。',
+       '[]',
+       '', 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94573.png', '16.13', '2026.S17'),
+      (1, '94574', '94574', '英勇福袋', '2',
+       '获得2个【次级英雄复制器】和5金币。',
+       '["这个物品允许你能复制一个3费或以下的弈子。"]',
+       '', 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94574.png', '16.13', '2026.S17'),
+      (1, '94572', '94572', '遥遥领先', '3',
+       '你不再获得利息。即刻获得16金币。在你的回合开始时，获得4经验。',
+       '["利息是你每储存10金币时获得的额外金币。"]',
+       '', 'https://game.gtimg.cn/images/lol/act/img/tft/hex/94572.png', '16.13', '2026.S17');
+
     INSERT INTO trait_champions (trait_id, champion_id, game_version, set_id)
     VALUES
       (1, 1, 'current', 'current'),
@@ -218,7 +256,7 @@ async function main() {
 
   try {
     await waitForServer(child);
-    const browser = await chromium.launch();
+    const browser = await chromium.launch(chromiumExecutable ? { executablePath: chromiumExecutable } : {});
     try {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
 
@@ -287,9 +325,36 @@ async function main() {
       }
 
       await page.goto(`http://127.0.0.1:${port}/data`, { waitUntil: 'domcontentloaded' });
-      if (!(await page.getByRole('button', { name: '强化符文' }).isDisabled())) {
-        throw new Error('Augment tab should be disabled.');
+      if (await page.getByRole('button', { name: '强化符文' }).isDisabled()) {
+        throw new Error('Augment tab should be enabled when augment API is available.');
       }
+
+      await page.goto(`http://127.0.0.1:${port}/data?type=augments`, { waitUntil: 'domcontentloaded' });
+      await page.getByPlaceholder('搜索强化符文').waitFor({ timeout: 10000 });
+      await page.getByText('强化符文 · 常规模式 · 16.13 · 3 条结果').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: '全部' }).waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: '银' }).waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: '金' }).waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: '彩' }).waitFor({ timeout: 10000 });
+      await page.getByText('遥遥领先').waitFor({ timeout: 10000 });
+      await page.locator('span').filter({ hasText: /^彩$/ }).first().waitFor({ timeout: 10000 });
+      await page.getByText(/即刻获得16金币/).waitFor({ timeout: 10000 });
+      await page.getByText('利息是你每储存10金币时获得的额外金币。').waitFor({ timeout: 10000 });
+
+      await page.getByRole('button', { name: '彩' }).click();
+      await page.waitForURL(/tier=3/, { timeout: 10000 });
+      await page.getByText('强化符文 · 常规模式 · 16.13 · 1 条结果').waitFor({ timeout: 10000 });
+      await page.getByText('遥遥领先').waitFor({ timeout: 10000 });
+      if ((await page.getByText('有用之材 I').count()) !== 0) {
+        throw new Error('Augment tier filter should hide other tiers.');
+      }
+
+      await page.getByRole('textbox', { name: '搜索资料' }).fill('利息');
+      await page.waitForURL(/q=%E5%88%A9%E6%81%AF/, { timeout: 10000 });
+      await page.getByText('遥遥领先').waitFor({ timeout: 10000 });
+      await page.getByRole('button', { name: '全部' }).click();
+      await page.waitForURL((url) => !url.searchParams.has('tier') && url.searchParams.get('q') === '利息', { timeout: 10000 });
+      await page.getByText('强化符文 · “利息” · 常规模式 · 16.13 · 1 条结果').waitFor({ timeout: 10000 });
       if ((await page.getByText('PROTOTYPE').count()) !== 0) {
         throw new Error('Formal data page should not contain prototype traces.');
       }
