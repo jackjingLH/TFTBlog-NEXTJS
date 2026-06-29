@@ -140,7 +140,9 @@ async function seedSourceDatabase() {
     );
 
     INSERT INTO sources (id, source_url, game_version, set_id, synced_at, status)
-    VALUES (1, 'https://game.gtimg.cn/images/lol/act/img/tft/js/race.js', 'current', 'current', '2026-06-26T00:00:00.000Z', 'complete');
+    VALUES
+      (1, 'https://game.gtimg.cn/images/lol/act/img/tft/js/chess.js, https://game.gtimg.cn/images/lol/act/img/tft/js/equip.js, https://game.gtimg.cn/images/lol/act/img/tft/js/race.js, https://game.gtimg.cn/images/lol/act/img/tft/js/job.js, https://game.gtimg.cn/images/lol/act/img/tft/js/hex.js', '16.13', '2026.S17', '2026-06-20T00:00:00.000Z', 'partial'),
+      (2, 'https://game.gtimg.cn/images/lol/act/img/tft/js/16.10-2026.S17-6100/chess-6100.js', '16.10', '2026.S17', '2026-06-26T00:00:00.000Z', 'complete');
 
     INSERT INTO champions (
       id, source_id, external_id, slug, name_zh, name_en, cost, traits_json,
@@ -241,6 +243,17 @@ async function seedSourceDatabase() {
         VALUES (1, 'trait', 'https://game.gtimg.cn/images/lol/act/img/tft/js/race.js', ?, '2026-06-26T00:00:00.000Z')
       `,
       [JSON.stringify(racePayload)],
+      (error) => (error ? reject(error) : resolve()),
+    );
+  });
+
+  await new Promise((resolve, reject) => {
+    db.run(
+      `
+        INSERT INTO raw_payloads (source_id, payload_type, url, body_json, captured_at)
+        VALUES (1, 'trait', 'https://game.gtimg.cn/images/lol/act/img/tft/js/job.js', ?, '2026-06-26T00:00:00.000Z')
+      `,
+      [JSON.stringify({ version: 'test', season: 'current', data: [] })],
       (error) => (error ? reject(error) : resolve()),
     );
   });
@@ -355,14 +368,19 @@ async function seedSourceDatabase() {
         skillImage: 'https://cdn.example.test/judge-a-spell.png',
         life: '650',
         lifeData: '650/1170/2106',
+        lifeMag: '1.8',
         attack: '35',
         attackData: '35/53/79',
+        attackMag: '1.5',
         armor: '40',
         spellBlock: '40',
         attackSpeed: '0.6',
         attackRange: '1',
+        crit: '25',
+        crit_damage: '140',
         magic: '100',
         startMagic: '30',
+        hero_EN_name: 'TFT17_JudgeA',
       },
     ],
   };
@@ -428,6 +446,33 @@ async function seedSourceDatabase() {
     );
   });
 
+  await exec(db, `
+    INSERT INTO champions (
+      id, source_id, external_id, slug, name_zh, name_en, cost, traits_json,
+      image_path, image_url, game_version, set_id
+    )
+    VALUES (99, 2, 'old-champion', 'old-champion', '旧赛季弈子', '', 1, '[]',
+      'assets/tft/champions/old.png', 'https://cdn.example.test/old.png', '16.10', '2026.S17');
+
+    INSERT INTO traits (
+      id, source_id, external_id, slug, name_zh, name_en, image_path, image_url, game_version, set_id
+    )
+    VALUES (99, 2, 'old-trait', 'old-trait', '旧赛季羁绊', '',
+      'assets/tft/traits/old.png', 'https://cdn.example.test/old-trait.png', '16.10', '2026.S17');
+
+    INSERT INTO items (
+      id, source_id, external_id, slug, name_zh, name_en, category, image_path, image_url, game_version, set_id
+    )
+    VALUES (99, 2, 'old-item', 'old-item', '旧赛季装备', '', '1',
+      'assets/tft/items/old.png', 'https://cdn.example.test/old-item.png', '16.12', '2026.S17');
+
+    INSERT INTO augments (
+      id, source_id, external_id, slug, name_zh, name_en, tier, image_path, image_url, game_version, set_id
+    )
+    VALUES (99, 2, 'old-augment', 'old-augment', '旧赛季强化', '', '1', '',
+      'https://cdn.example.test/old-augment.png', '16.13', '2026.S17');
+  `);
+
   await close(db);
 }
 
@@ -439,6 +484,17 @@ async function main() {
     const db = new sqlite3.Database(targetPath, sqlite3.OPEN_READONLY);
     try {
       const columns = await all(db, `PRAGMA table_info(traits)`);
+      const importedSources = await all(db, `SELECT id, game_version, set_id FROM sources ORDER BY id`);
+      if (importedSources.length !== 1 || importedSources[0].id !== 1 || importedSources[0].set_id !== '2026.S17') {
+        throw new Error(`Import should keep the latest batch from current official endpoints, got: ${JSON.stringify(importedSources)}`);
+      }
+      for (const tableName of ['champions', 'traits', 'items', 'augments']) {
+        const staleRows = await all(db, `SELECT name_zh, game_version, set_id FROM ${tableName} WHERE name_zh LIKE '旧赛季%'`);
+        if (staleRows.length > 0) {
+          throw new Error(`Import should exclude non-current-source ${tableName}, got: ${JSON.stringify(staleRows)}`);
+        }
+      }
+
       const columnNames = new Set(columns.map((column) => column.name));
       if (!columnNames.has('description') || !columnNames.has('levels_json')) {
         throw new Error(`traits table should persist description and levels_json columns: ${[...columnNames].join(',')}`);
@@ -610,6 +666,17 @@ async function main() {
         championStats.mana !== '30/100'
       ) {
         throw new Error(`Expected imported champion stats, got: ${JSON.stringify(championStats)}`);
+      }
+      if (
+        championStats.baseHealth !== '650' ||
+        championStats.baseAttack !== '35' ||
+        championStats.healthMultiplier !== '1.8' ||
+        championStats.attackMultiplier !== '1.5' ||
+        championStats.critRate !== '25' ||
+        championStats.critDamage !== '140' ||
+        championStats.englishName !== 'TFT17_JudgeA'
+      ) {
+        throw new Error(`Expected imported extended champion stats, got: ${JSON.stringify(championStats)}`);
       }
 
       const relationColumns = await all(db, `PRAGMA table_info(trait_champions)`);

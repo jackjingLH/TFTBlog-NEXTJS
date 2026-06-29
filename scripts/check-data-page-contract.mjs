@@ -48,6 +48,11 @@ async function seedDatabase() {
       name_en TEXT NOT NULL DEFAULT '',
       cost INTEGER,
       traits_json TEXT NOT NULL DEFAULT '[]',
+      skill_name TEXT NOT NULL DEFAULT '',
+      skill_type TEXT NOT NULL DEFAULT '',
+      skill_detail TEXT NOT NULL DEFAULT '',
+      skill_image_url TEXT NOT NULL DEFAULT '',
+      stats_json TEXT NOT NULL DEFAULT '{}',
       image_path TEXT NOT NULL,
       image_url TEXT NOT NULL,
       game_version TEXT NOT NULL,
@@ -116,14 +121,17 @@ async function seedDatabase() {
 
     INSERT INTO champions (
       source_id, external_id, slug, name_zh, cost, traits_json,
-      image_path, image_url, game_version, set_id
+      stats_json, image_path, image_url, game_version, set_id
     )
     VALUES
       (1, 'aatrox', 'aatrox', '亚托克斯', 1, '["堡垒卫士"]',
+       '{"role":"物理战士","englishName":"TFT17_Aatrox","baseHealth":"650","baseAttack":"35","attackGrowth":"35/53/79","healthGrowth":"650/1170/2106","healthMultiplier":"1.8","attackMultiplier":"1.5","armor":"40","magicResist":"40","attackSpeed":"0.6","range":"1","mana":"30/100","critRate":"25","critDamage":"140"}',
        'assets/tft/champions/aatrox.png', 'https://cdn.example.test/aatrox.png', 'current', 'current'),
       (1, 'jinx', 'jinx', '金克丝', 2, '["幻灵战队"]',
+       '{}',
        'assets/tft/champions/jinx.png', 'https://cdn.example.test/jinx.png', 'current', 'current'),
       (1, 'forge', 'forge', '成装锻造器', 8, '[]',
+       '{}',
        'assets/tft/champions/forge.png', 'https://cdn.example.test/forge.png', 'current', 'current');
 
     INSERT INTO traits (
@@ -266,6 +274,11 @@ async function main() {
       await page.getByText(/英雄 · \d+ 条结果/).waitFor({ timeout: 10000 });
       await page.getByText('成装锻造器').waitFor({ timeout: 10000 });
       await page.getByText('特殊对象').first().waitFor({ timeout: 10000 });
+      await page.getByText('亚托克斯').click();
+      await page.getByText('基础生命').waitFor({ timeout: 10000 });
+      await page.getByText('暴击率').waitFor({ timeout: 10000 });
+      await page.getByText('英文内部名').waitFor({ timeout: 10000 });
+      await page.getByText('TFT17_Aatrox').waitFor({ timeout: 10000 });
       await page.getByRole('textbox', { name: '搜索资料' }).fill('堡垒');
       await page.waitForURL(/type=champions/, { timeout: 10000 });
       await page.getByText('堡垒卫士').first().waitFor({ timeout: 10000 });

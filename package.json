@@ -21,7 +21,11 @@
     "check:data-prototype-cleanup": "node scripts/check-data-prototype-cleanup.mjs",
     "check:static-api-contract": "node scripts/check-static-api-contract.mjs",
     "check:static-shell-contract": "node scripts/check-static-shell-contract.mjs",
+    "check:data-reference-sync-contract": "node scripts/check-data-reference-sync-contract.mjs",
+    "check:data-reference-sync-command-contract": "node scripts/check-data-reference-sync-command-contract.mjs",
+    "check:data-reference-sync-production-guards": "node scripts/check-data-reference-sync-production-guards.mjs",
     "publish:guide": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\",\\\"moduleResolution\\\":\\\"node\\\"}\" scripts/publish-guide.ts",
+    "sync:data-references": "node scripts/sync-data-references.mjs",
     "build:static-deploy": "node scripts/build-static-deploy.mjs"
   },
   "dependencies": {

@@ -43,6 +43,7 @@ async function seedDatabase() {
       name_en TEXT NOT NULL DEFAULT '',
       cost INTEGER,
       traits_json TEXT NOT NULL DEFAULT '[]',
+      stats_json TEXT NOT NULL DEFAULT '{}',
       image_path TEXT NOT NULL,
       image_url TEXT NOT NULL,
       game_version TEXT NOT NULL,
@@ -116,14 +117,17 @@ async function seedDatabase() {
 
     INSERT INTO champions (
       source_id, external_id, slug, name_zh, cost, traits_json,
-      image_path, image_url, game_version, set_id
+      stats_json, image_path, image_url, game_version, set_id
     )
     VALUES
       (1, 'aatrox', 'aatrox', '亚托克斯', 1, '["幻灵战队","堡垒卫士"]',
+       '{"role":"物理战士","englishName":"TFT17_Aatrox","baseHealth":"650","baseAttack":"35","attackGrowth":"35/53/79","healthGrowth":"650/1170/2106","healthMultiplier":"1.8","attackMultiplier":"1.5","armor":"40","magicResist":"40","attackSpeed":"0.6","range":"1","mana":"30/100","critRate":"25","critDamage":"140"}',
        'assets/tft/champions/aatrox.png', 'https://cdn.example.test/aatrox.png', 'current', 'current'),
       (1, 'jinx', 'jinx', '金克丝', 2, '["幻灵战队"]',
+       '{}',
        'assets/tft/champions/jinx.png', 'https://cdn.example.test/jinx.png', 'current', 'current'),
       (1, 'forge', 'forge', '成装锻造器', 8, '[]',
+       '{}',
        'assets/tft/champions/forge.png', 'https://cdn.example.test/forge.png', 'current', 'current');
 
     INSERT INTO traits (
@@ -199,7 +203,8 @@ async function seedDatabase() {
 
 function requestJson(pathname) {
   return new Promise((resolve, reject) => {
-    const req = http.get(`http://127.0.0.1:${port}${pathname}`, (res) => {
+    const url = new URL(pathname, `http://127.0.0.1:${port}`);
+    const req = http.get(url, (res) => {
       let body = '';
       res.setEncoding('utf8');
       res.on('data', (chunk) => {
@@ -213,7 +218,7 @@ function requestJson(pathname) {
         }
       });
     });
-    req.setTimeout(5000, () => {
+    req.setTimeout(10000, () => {
       req.destroy(new Error(`Request timed out: ${pathname}`));
     });
     req.on('error', reject);
@@ -281,6 +286,9 @@ async function main() {
 
     if (response.body.items[0]?.name !== '亚托克斯' || !response.body.items[0]?.traits.includes('堡垒卫士')) {
       throw new Error(`Expected filtered champion result: ${JSON.stringify(response.body.items)}`);
+    }
+    if (response.body.items[0]?.stats?.baseHealth !== '650' || response.body.items[0]?.stats?.critRate !== '25' || response.body.items[0]?.stats?.englishName !== 'TFT17_Aatrox') {
+      throw new Error(`Next champion API should include extended stats: ${JSON.stringify(response.body.items[0])}`);
     }
 
     const traitResponse = await requestJson('/api/data?type=traits&q=幻灵');

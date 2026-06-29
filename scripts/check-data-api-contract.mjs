@@ -121,7 +121,7 @@ async function seedDatabase() {
     )
     VALUES
       (1, 'aatrox', 'aatrox', '亚托克斯', 1, '["幻灵战队","法官"]',
-       '{"role":"物理战士","attackGrowth":"35/53/79","healthGrowth":"650/1170/2106","armor":"40","magicResist":"40","attackSpeed":"0.6","range":"1","mana":"30/100"}',
+       '{"role":"物理战士","englishName":"TFT17_Aatrox","baseHealth":"650","baseAttack":"35","attackGrowth":"35/53/79","healthGrowth":"650/1170/2106","healthMultiplier":"1.8","attackMultiplier":"1.5","armor":"40","magicResist":"40","attackSpeed":"0.6","range":"1","mana":"30/100","critRate":"25","critDamage":"140"}',
        'assets/tft/champions/aatrox.png', 'https://cdn.example.test/aatrox.png', 'current', 'current'),
       (1, 'jinx', 'jinx', '金克丝', 2, '["幻灵战队"]', '{}',
        'assets/tft/champions/jinx.png', 'https://cdn.example.test/jinx.png', 'current', 'current'),
@@ -295,13 +295,20 @@ async function main() {
     const aatrox = body.items.find((item) => item.name === '亚托克斯');
     if (
       aatrox?.stats?.role !== '物理战士' ||
+      aatrox.stats.baseHealth !== '650' ||
+      aatrox.stats.baseAttack !== '35' ||
       aatrox.stats.attackGrowth !== '35/53/79' ||
       aatrox.stats.healthGrowth !== '650/1170/2106' ||
+      aatrox.stats.healthMultiplier !== '1.8' ||
+      aatrox.stats.attackMultiplier !== '1.5' ||
       aatrox.stats.armor !== '40' ||
       aatrox.stats.magicResist !== '40' ||
       aatrox.stats.attackSpeed !== '0.6' ||
       aatrox.stats.range !== '1' ||
-      aatrox.stats.mana !== '30/100'
+      aatrox.stats.mana !== '30/100' ||
+      aatrox.stats.critRate !== '25' ||
+      aatrox.stats.critDamage !== '140' ||
+      aatrox.stats.englishName !== 'TFT17_Aatrox'
     ) {
       throw new Error(`Champion response should include curated stats: ${JSON.stringify(aatrox)}`);
     }

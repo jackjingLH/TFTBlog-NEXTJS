@@ -51,6 +51,10 @@ Visual component displaying guide summary:
 A compact TFT lookup entry for the latest imported TFT game facts such as champions, traits, and items. It supports browsing and quick recognition, not historical version lookup or a full interactive team-building tool.
 _Avoid_: Asset, raw data, database row, historical archive
 
+**Data Reference Table Sync (资料表同步)**
+The deployment operation that replaces only the data-reference tables in the production SQLite database from a local staging copy. Guide tables remain production-owned and are not changed by this operation.
+_Avoid_: Full database sync, guide sync, source import
+
 **Item Detail (装备详细数据)**
 Official factual fields attached to every item reference shown in the data index, such as effect text, crafting formula, and item rules. The detail is scannable in the data index rather than a separate item page, and is not strategy guidance, strength scoring, or recommended holder data.
 _Avoid_: 装备攻略, 装备推荐, 强度评级

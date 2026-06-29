@@ -29,13 +29,20 @@ type DataItem = {
   skill?: { name: string; type: string; detail: string; imageUrl: string };
   stats?: {
     role?: string;
+    englishName?: string;
+    baseHealth?: string;
+    baseAttack?: string;
     attackGrowth?: string;
     healthGrowth?: string;
+    healthMultiplier?: string;
+    attackMultiplier?: string;
     armor?: string;
     magicResist?: string;
     attackSpeed?: string;
     range?: string;
     mana?: string;
+    critRate?: string;
+    critDamage?: string;
   };
 };
 
@@ -94,13 +101,20 @@ function ChampionRow({ item }: { item: DataItem }) {
   const traitDetails = item.traitDetails || [];
   const statItems = [
     { label: '定位', value: stats?.role },
+    { label: '基础生命', value: stats?.baseHealth },
+    { label: '基础攻击', value: stats?.baseAttack },
     { label: '攻击成长', value: stats?.attackGrowth },
     { label: '生命成长', value: stats?.healthGrowth },
+    { label: '生命倍率', value: stats?.healthMultiplier },
+    { label: '攻击倍率', value: stats?.attackMultiplier },
     { label: '护甲', value: stats?.armor },
     { label: '魔抗', value: stats?.magicResist },
     { label: '攻速', value: stats?.attackSpeed },
     { label: '射程', value: stats?.range },
     { label: '法力', value: stats?.mana },
+    { label: '暴击率', value: stats?.critRate ? `${stats.critRate}%` : '' },
+    { label: '暴击伤害', value: stats?.critDamage ? `${stats.critDamage}%` : '' },
+    { label: '英文内部名', value: stats?.englishName },
   ].filter((stat) => stat.value);
   const canExpand = Boolean((skill && (skill.name || skill.detail)) || statItems.length > 0 || traitDetails.length > 0);
 

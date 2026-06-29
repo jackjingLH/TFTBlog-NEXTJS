@@ -97,6 +97,7 @@ async function seedDatabase() {
       name_en TEXT NOT NULL DEFAULT '',
       cost INTEGER,
       traits_json TEXT NOT NULL DEFAULT '[]',
+      stats_json TEXT NOT NULL DEFAULT '{}',
       image_path TEXT NOT NULL,
       image_url TEXT NOT NULL,
       game_version TEXT NOT NULL,
@@ -177,12 +178,14 @@ async function seedDatabase() {
   await run(db, `
     INSERT INTO champions (
       source_id, external_id, slug, name_zh, cost, traits_json,
-      image_path, image_url, game_version, set_id
+      stats_json, image_path, image_url, game_version, set_id
     )
     VALUES
       (1, 'aatrox', 'aatrox', '亚托克斯', 1, '["幻灵战队","堡垒卫士"]',
+       '{"role":"物理战士","englishName":"TFT17_Aatrox","baseHealth":"650","baseAttack":"35","attackGrowth":"35/53/79","healthGrowth":"650/1170/2106","healthMultiplier":"1.8","attackMultiplier":"1.5","armor":"40","magicResist":"40","attackSpeed":"0.6","range":"1","mana":"30/100","critRate":"25","critDamage":"140"}',
        'assets/tft/champions/aatrox.png', 'https://cdn.example.test/aatrox.png', 'current', 'current'),
       (1, 'jinx', 'jinx', '金克丝', 2, '["幻灵战队"]',
+       '{}',
        'assets/tft/champions/jinx.png', 'https://cdn.example.test/jinx.png', 'current', 'current')
   `);
   await run(db, `
@@ -363,6 +366,13 @@ async function main() {
     if (dataChampionApi.statusCode !== 200 || !dataChampionApi.body.includes('亚托克斯')) {
       throw new Error(`/api/data?type=champions did not return runtime SQLite champion references: ${dataChampionApi.body}`);
     }
+    if (
+      !dataChampionApi.body.includes('"baseHealth":"650"') ||
+      !dataChampionApi.body.includes('"critRate":"25"') ||
+      !dataChampionApi.body.includes('"englishName":"TFT17_Aatrox"')
+    ) {
+      throw new Error(`/api/data?type=champions did not return extended champion stats: ${dataChampionApi.body}`);
+    }
 
     if (dataTraitApi.statusCode !== 200 || !dataTraitApi.body.includes('幻灵战队')) {
       throw new Error(`/api/data?type=traits did not return runtime SQLite trait references: ${dataTraitApi.body}`);
@@ -459,6 +469,12 @@ async function main() {
         await page.goto(`http://127.0.0.1:${port}${route}`, { waitUntil: 'networkidle' });
         await page.waitForSelector(`text=${text}`, { timeout: 5000 });
       }
+
+      await page.goto(`http://127.0.0.1:${port}/data?type=champions`, { waitUntil: 'networkidle' });
+      await page.getByText('亚托克斯').click();
+      await page.waitForSelector('text=基础生命', { timeout: 5000 });
+      await page.waitForSelector('text=暴击率', { timeout: 5000 });
+      await page.waitForSelector('text=TFT17_Aatrox', { timeout: 5000 });
 
       await page.goto(`http://127.0.0.1:${port}/data?type=items&q=破损`, { waitUntil: 'networkidle' });
       await page.waitForSelector('text=15%最大生命值的护盾', { timeout: 5000 });

@@ -8,6 +8,13 @@ const defaultTargetPath = path.join(projectRoot, 'data', 'tftblog.sqlite');
 
 const sourcePath = process.argv[2] || defaultSourcePath;
 const targetPath = process.argv[3] || defaultTargetPath;
+const currentOfficialPayloadUrls = [
+  'https://game.gtimg.cn/images/lol/act/img/tft/js/chess.js',
+  'https://game.gtimg.cn/images/lol/act/img/tft/js/equip.js',
+  'https://game.gtimg.cn/images/lol/act/img/tft/js/race.js',
+  'https://game.gtimg.cn/images/lol/act/img/tft/js/job.js',
+  'https://game.gtimg.cn/images/lol/act/img/tft/js/hex.js',
+];
 
 function quoteSqlLiteral(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
@@ -45,6 +52,72 @@ async function countRows(db, table) {
 async function tableExists(db, tableName, schemaName = 'main') {
   const row = await get(db, `SELECT name FROM ${schemaName}.sqlite_master WHERE type = 'table' AND name = ?`, [tableName]);
   return Boolean(row);
+}
+
+async function selectImportSourceId(db) {
+  if (await tableExists(db, 'raw_payloads', 'source_assets')) {
+    const placeholders = currentOfficialPayloadUrls.map(() => '?').join(', ');
+    const currentEndpointBatch = await get(
+      db,
+      `
+        SELECT s.id
+        FROM source_assets.sources s
+        JOIN source_assets.raw_payloads rp ON rp.source_id = s.id
+        WHERE rp.url IN (${placeholders})
+        GROUP BY s.id
+        HAVING COUNT(DISTINCT rp.url) = ?
+        ORDER BY s.synced_at DESC, s.id DESC
+        LIMIT 1
+      `,
+      [...currentOfficialPayloadUrls, currentOfficialPayloadUrls.length],
+    );
+    if (currentEndpointBatch?.id) {
+      return currentEndpointBatch.id;
+    }
+  }
+
+  const current = await get(
+    db,
+    `
+      SELECT id
+      FROM source_assets.sources
+      WHERE set_id = 'current'
+      ORDER BY synced_at DESC, id DESC
+      LIMIT 1
+    `,
+  );
+  if (current?.id) {
+    return current.id;
+  }
+
+  const fallback = await get(
+    db,
+    `
+      SELECT id
+      FROM source_assets.sources
+      WHERE status IN ('ok', 'complete')
+      ORDER BY synced_at DESC, id DESC
+      LIMIT 1
+    `,
+  );
+  if (fallback?.id) {
+    return fallback.id;
+  }
+
+  const anySource = await get(
+    db,
+    `
+      SELECT id
+      FROM source_assets.sources
+      ORDER BY synced_at DESC, id DESC
+      LIMIT 1
+    `,
+  );
+  if (!anySource?.id) {
+    throw new Error('No source rows found in source database.');
+  }
+
+  return anySource.id;
 }
 
 async function ensureColumn(db, tableName, columnName, definition) {
@@ -183,7 +256,7 @@ function collectTraitMetadata(rawPayloadRows) {
   return metadata;
 }
 
-async function applyTraitMetadata(db) {
+async function applyTraitMetadata(db, sourceId) {
   if (!(await tableExists(db, 'raw_payloads', 'source_assets'))) {
     return;
   }
@@ -193,8 +266,10 @@ async function applyTraitMetadata(db) {
     `
       SELECT body_json
       FROM source_assets.raw_payloads
-      WHERE payload_type = 'trait'
+      WHERE source_id = ?
+        AND payload_type = 'trait'
     `,
+    [sourceId],
   );
   const metadata = collectTraitMetadata(rawPayloadRows);
   if (metadata.size === 0) {
@@ -309,7 +384,7 @@ function collectItemMetadata(rawPayloadRows, itemsByExternalId) {
   return { metadata, unresolvedFormulaMaterials };
 }
 
-async function applyItemMetadata(db) {
+async function applyItemMetadata(db, sourceId) {
   if (!(await tableExists(db, 'raw_payloads', 'source_assets'))) {
     return 0;
   }
@@ -319,8 +394,10 @@ async function applyItemMetadata(db) {
     `
       SELECT body_json
       FROM source_assets.raw_payloads
-      WHERE payload_type = 'item'
+      WHERE source_id = ?
+        AND payload_type = 'item'
     `,
+    [sourceId],
   );
   const items = await all(db, `SELECT id, external_id, name_zh FROM items`);
   const itemsByExternalId = new Map();
@@ -377,7 +454,7 @@ function collectAugmentMetadata(rawPayloadRows) {
   return metadata;
 }
 
-async function applyAugmentMetadata(db) {
+async function applyAugmentMetadata(db, sourceId) {
   if (!(await tableExists(db, 'raw_payloads', 'source_assets'))) {
     return;
   }
@@ -387,8 +464,10 @@ async function applyAugmentMetadata(db) {
     `
       SELECT body_json
       FROM source_assets.raw_payloads
-      WHERE payload_type = 'augment'
+      WHERE source_id = ?
+        AND payload_type = 'augment'
     `,
+    [sourceId],
   );
   const metadata = collectAugmentMetadata(rawPayloadRows);
   if (metadata.size === 0) {
@@ -444,12 +523,19 @@ function collectChampionStats(champion) {
 
   return {
     role: normalizeChampionStat(champion.chessRole),
+    englishName: normalizeChampionStat(champion.hero_EN_name),
+    baseHealth: normalizeChampionStat(champion.life),
+    baseAttack: normalizeChampionStat(champion.attack),
     attackGrowth: normalizeChampionStat(champion.attackData || champion.attack),
     healthGrowth: normalizeChampionStat(champion.lifeData || champion.life),
+    healthMultiplier: normalizeChampionStat(champion.lifeMag),
+    attackMultiplier: normalizeChampionStat(champion.attackMag),
     armor: normalizeChampionStat(champion.armor),
     magicResist: normalizeChampionStat(champion.spellBlock),
     attackSpeed: normalizeChampionStat(champion.attackSpeed),
     range: normalizeChampionStat(champion.attackRange),
+    critRate: normalizeChampionStat(champion.crit),
+    critDamage: normalizeChampionStat(champion.crit_damage),
     mana: startMana || maxMana ? `${startMana || '0'}/${maxMana || '0'}` : '',
   };
 }
@@ -475,7 +561,7 @@ function collectChampionMetadata(rawPayloadRows) {
   return metadata;
 }
 
-async function applyChampionMetadata(db) {
+async function applyChampionMetadata(db, sourceId) {
   if (!(await tableExists(db, 'raw_payloads', 'source_assets'))) {
     return;
   }
@@ -485,9 +571,11 @@ async function applyChampionMetadata(db) {
     `
       SELECT body_json
       FROM source_assets.raw_payloads
-      WHERE payload_type = 'champion'
+      WHERE source_id = ?
+        AND payload_type = 'champion'
       ORDER BY source_id, id
     `,
+    [sourceId],
   );
   const metadata = collectChampionMetadata(rawPayloadRows);
   if (metadata.size === 0) {
@@ -678,9 +766,10 @@ async function main() {
     await ensureColumn(db, 'champions', 'skill_image_url', "TEXT NOT NULL DEFAULT ''");
     await ensureColumn(db, 'champions', 'stats_json', "TEXT NOT NULL DEFAULT '{}'");
 
-    await exec(db, `
-      ATTACH DATABASE ${sourceLiteral} AS source_assets;
+    await exec(db, `ATTACH DATABASE ${sourceLiteral} AS source_assets;`);
+    const importSourceId = await selectImportSourceId(db);
 
+    await exec(db, `
       BEGIN IMMEDIATE TRANSACTION;
       DELETE FROM trait_champions;
       DELETE FROM items;
@@ -692,33 +781,38 @@ async function main() {
       INSERT INTO sources
         (id, source_url, game_version, set_id, synced_at, status)
         SELECT id, source_url, game_version, set_id, synced_at, status
-        FROM source_assets.sources;
+        FROM source_assets.sources
+        WHERE id = ${Number(importSourceId)};
 
       INSERT INTO champions
         (id, source_id, external_id, slug, name_zh, name_en, cost, traits_json, image_path, image_url, game_version, set_id)
         SELECT id, source_id, external_id, slug, name_zh, name_en, cost, traits_json, image_path, image_url, game_version, set_id
-        FROM source_assets.champions;
+        FROM source_assets.champions
+        WHERE source_id = ${Number(importSourceId)};
 
       INSERT INTO traits
         (id, source_id, external_id, slug, name_zh, name_en, description, levels_json, image_path, image_url, game_version, set_id)
         SELECT id, source_id, external_id, slug, name_zh, name_en, '', '[]', image_path, image_url, game_version, set_id
-        FROM source_assets.traits;
+        FROM source_assets.traits
+        WHERE source_id = ${Number(importSourceId)};
 
       INSERT INTO items
         (id, source_id, external_id, slug, name_zh, name_en, category, image_path, image_url, game_version, set_id)
         SELECT id, source_id, external_id, slug, name_zh, name_en, category, image_path, image_url, game_version, set_id
-        FROM source_assets.items;
+        FROM source_assets.items
+        WHERE source_id = ${Number(importSourceId)};
 
       INSERT INTO augments
         (id, source_id, external_id, slug, name_zh, name_en, tier, image_path, image_url, game_version, set_id)
         SELECT id, source_id, external_id, slug, name_zh, name_en, tier, image_path, image_url, game_version, set_id
-        FROM source_assets.augments;
+        FROM source_assets.augments
+        WHERE source_id = ${Number(importSourceId)};
     `);
 
-    await applyTraitMetadata(db);
-    const unresolvedFormulaMaterials = await applyItemMetadata(db);
-    await applyAugmentMetadata(db);
-    await applyChampionMetadata(db);
+    await applyTraitMetadata(db, importSourceId);
+    const unresolvedFormulaMaterials = await applyItemMetadata(db, importSourceId);
+    await applyAugmentMetadata(db, importSourceId);
+    await applyChampionMetadata(db, importSourceId);
     await applyTraitChampionAssociations(db);
 
     await exec(db, `
