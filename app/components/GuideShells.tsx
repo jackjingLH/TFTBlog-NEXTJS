@@ -62,13 +62,13 @@ export function FeaturedGuideCard({ guide }: { guide: GuideSummary }) {
       <div className="flex flex-col sm:flex-row">
         {/* Cover - Desktop: 40-45% width, Mobile: full width on top */}
         {guide.coverUrl ? (
-          <div className="w-full sm:w-[42%] aspect-[16/8.4] bg-gray-100 overflow-hidden flex-shrink-0">
+          <div className="w-full sm:w-[42%] aspect-[16/8.4] bg-gray-100 overflow-hidden flex flex-shrink-0 items-center justify-center">
             <Image
               src={guide.coverUrl}
               alt={guide.title}
               width={600}
               height={400}
-              className="w-full h-full object-cover object-left"
+              className="h-auto max-h-full w-auto max-w-full object-contain"
               unoptimized
             />
           </div>
@@ -135,13 +135,13 @@ export function RegularGuideCard({ guide }: { guide: GuideSummary }) {
       )}
 
       {guide.coverUrl ? (
-        <div className="aspect-[16/8.4] bg-gray-100 overflow-hidden">
+        <div className="aspect-[16/8.4] bg-gray-100 overflow-hidden flex items-center justify-center">
           <Image
             src={guide.coverUrl}
             alt={guide.title}
             width={400}
             height={225}
-            className="w-full h-full object-cover object-left"
+            className="h-auto max-h-full w-auto max-w-full object-contain"
             unoptimized
           />
         </div>
